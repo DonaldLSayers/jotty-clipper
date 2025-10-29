@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jotty Clipper Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title-group">
+        <svg class="logo" width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h1>Jotty Clipper Settings</h1>
+      </div>
+      <p class="subtitle">Configure your connection to Jotty</p>
+    </div>
+
+    <div id="status-message" class="status-message hidden"></div>
+
+    <form id="settings-form">
+      <div class="section">
+        <h2>API Configuration</h2>
+        <p class="section-description">Enter your Jotty instance details to enable clipping</p>
+
+        <div class="form-group">
+          <label for="jotty-url">
+            Jotty URL
+            <span class="required">*</span>
+          </label>
+          <input
+            type="url"
+            id="jotty-url"
+            class="input"
+            placeholder="https://your-jotty-instance.com"
+            required
+          >
+          <p class="help-text">The URL of your Jotty instance (without trailing slash)</p>
+        </div>
+
+        <div class="form-group">
+          <label for="api-key">
+            API Key
+            <span class="required">*</span>
+          </label>
+          <div class="password-input">
+            <input
+              type="password"
+              id="api-key"
+              class="input"
+              placeholder="Enter your Jotty API key"
+              required
+            >
+            <button type="button" class="toggle-password" id="toggle-password">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="12" cy="12" r="3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
+          <p class="help-text">Your personal API key from Jotty settings</p>
+        </div>
+
+        <button type="button" id="test-connection" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Test Connection
+        </button>
+      </div>
+
+      <div class="section">
+        <h2>Default Settings</h2>
+        <p class="section-description">Set default values for new clips</p>
+
+        <div class="form-group">
+          <label for="default-category">Default Category</label>
+          <div class="select-wrapper">
+            <select id="default-category" class="input">
+              <option value="">No default (prompt each time)</option>
+            </select>
+          </div>
+          <p class="help-text">The default category for new clips</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Clipping Preferences</h2>
+        <p class="section-description">Customize how content is extracted</p>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="include-metadata">
+            <span class="checkbox-custom"></span>
+            <span>Include page metadata (author, date, etc.)</span>
+          </label>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="include-images">
+            <span class="checkbox-custom"></span>
+            <span>Embed images in clipped content</span>
+          </label>
+        </div>
+
+        <div class="form-group checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="auto-tag">
+            <span class="checkbox-custom"></span>
+            <span>Automatically add source tags (e.g., "reddit", "youtube")</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>About</h2>
+        <p class="section-description">Jotty Clipper v1.0.0</p>
+        <p class="help-text">
+          Clip web content to your Jotty notes with smart extraction for Reddit, YouTube, Twitter, Medium, GitHub, Stack Overflow, and more.
+        </p>
+      </div>
+
+      <div class="actions">
+        <button type="button" id="reset-btn" class="btn btn-secondary">Reset to Defaults</button>
+        <button type="submit" class="btn btn-primary">Save Settings</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

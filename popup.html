@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jotty Clipper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <svg class="logo" width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <h1>Jotty Clipper</h1>
+    </div>
+
+    <div id="status-message" class="status-message hidden"></div>
+
+    <div class="section">
+      <label for="category-select">Category</label>
+      <div class="select-wrapper">
+        <select id="category-select" class="input">
+          <option value="">Loading categories...</option>
+        </select>
+      </div>
+      <input type="text" id="custom-category-input" class="input" placeholder="Or type a new category name" style="margin-top: 8px; display: none;">
+    </div>
+
+    <div class="section">
+      <label for="title-input">Title</label>
+      <input type="text" id="title-input" class="input" placeholder="Auto-detected from page">
+    </div>
+
+    <div class="section">
+      <label>Clip Type</label>
+      <div class="clip-types">
+        <button class="clip-type-btn active" data-type="auto">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Auto</span>
+        </button>
+        <button class="clip-type-btn" data-type="full">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Full Page</span>
+        </button>
+        <button class="clip-type-btn" data-type="selection">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>Selection</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="settings-btn" class="btn btn-secondary">Settings</button>
+      <button id="clip-btn" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="17 21 17 13 7 13 7 21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Clip to Jotty
+      </button>
+    </div>
+
+    <div class="footer">
+      <a href="#" id="view-settings">Configure API settings</a>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
