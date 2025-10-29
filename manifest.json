@@ -34,5 +34,21 @@
     "gecko": {
       "id": "clipper@jotty.io"
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "js/content.js",
+        "js/browser-polyfill.min.js",
+        "js/global.js",
+        "js/options.js",
+        "js/popup.js",
+        "icons/lucide/lucide.min.js"
+      ],
+      "matches": [
+        "http://*/",
+        "https://*/"
+      ]
+    }
+  ]
 }

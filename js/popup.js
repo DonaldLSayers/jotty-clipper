@@ -69,15 +69,13 @@ const ensureContentScript = async () => {
   }
 
   try {
-    // Try to ping the content script
     await browser.tabs.sendMessage(currentTab.id, { action: 'ping' });
-    return true; // Already injected
+    return true; 
   } catch (error) {
-    // Not injected, inject it now
     try {
       await browser.scripting.executeScript({
         target: { tabId: currentTab.id },
-        files: ['content.js']
+        files: ['js/browser-polyfill.min.js', 'js/content.js']
       });
       return true;
     } catch (injectError) {
