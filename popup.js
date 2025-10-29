@@ -91,9 +91,35 @@ async function loadCategories() {
   }
 }
 
+// Inject content script if not already injected
+async function ensureContentScript() {
+  if (!currentTab) return false;
+
+  try {
+    // Try to ping the content script
+    await chrome.tabs.sendMessage(currentTab.id, { action: 'ping' });
+    return true; // Already injected
+  } catch (error) {
+    // Not injected, inject it now
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: currentTab.id },
+        files: ['content.js']
+      });
+      return true;
+    } catch (injectError) {
+      console.error('Failed to inject content script:', injectError);
+      return false;
+    }
+  }
+}
+
 // Detect page information
 async function detectPageInfo() {
   if (!currentTab) return;
+
+  // Ensure content script is loaded
+  await ensureContentScript();
 
   // Send message to content script to get page info
   try {
@@ -183,6 +209,9 @@ async function handleClip() {
   clipBtn.innerHTML = '<span class="loading"></span> Clipping...';
 
   try {
+    // Ensure content script is loaded
+    await ensureContentScript();
+
     // Get content from page
     const response = await chrome.tabs.sendMessage(currentTab.id, {
       action: 'extractContent',

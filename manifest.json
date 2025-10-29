@@ -7,13 +7,9 @@
     "storage",
     "activeTab",
     "scripting",
-    "contextMenus",
-    "notifications"
+    "contextMenus"
   ],
   "options_page": "options.html",
-  "host_permissions": [
-    "<all_urls>"
-  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -29,12 +25,5 @@
   },
   "background": {
     "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
-  ]
+  }
 }

@@ -822,6 +822,11 @@ function genericExtract(clipType) {
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  if (request.action === 'ping') {
+    sendResponse({ status: 'ready' });
+    return true;
+  }
+
   if (request.action === 'getPageInfo') {
     const hostname = new URL(window.location.href).hostname;
     const extractor = findExtractor(hostname);

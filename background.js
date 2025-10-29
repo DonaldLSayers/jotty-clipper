@@ -44,18 +44,34 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   handleContextMenuClick(info, tab);
 });
 
+// Inject content script if not already injected
+async function ensureContentScript(tabId) {
+  try {
+    // Try to ping the content script
+    await chrome.tabs.sendMessage(tabId, { action: 'ping' });
+    return true; // Already injected
+  } catch (error) {
+    // Not injected, inject it now
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tabId },
+        files: ['content.js']
+      });
+      return true;
+    } catch (injectError) {
+      console.error('Failed to inject content script:', injectError);
+      return false;
+    }
+  }
+}
+
 // Handle context menu actions
 async function handleContextMenuClick(info, tab) {
   try {
     const settings = await chrome.storage.sync.get(['jottyUrl', 'jottyApiKey', 'defaultCategory']);
 
     if (!settings.jottyUrl || !settings.jottyApiKey) {
-      await chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon48.png',
-        title: 'Jotty Clipper',
-        message: 'Please configure your API settings first'
-      });
+      console.error('Jotty Clipper: API settings not configured');
       return;
     }
 
@@ -79,8 +95,9 @@ async function handleContextMenuClick(info, tab) {
         break;
 
       case 'clip-page':
-        // Send message to content script to extract page content
+        // Ensure content script is injected before extracting
         try {
+          await ensureContentScript(tab.id);
           const response = await chrome.tabs.sendMessage(tab.id, {
             action: 'extractContent',
             clipType: 'auto'
@@ -106,21 +123,8 @@ async function handleContextMenuClick(info, tab) {
       url: tab.url,
       settings
     });
-
-    await chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'Jotty Clipper',
-      message: 'Successfully clipped to Jotty!'
-    });
   } catch (error) {
     console.error('Error in handleContextMenuClick:', error);
-    await chrome.notifications.create({
-      type: 'basic',
-      iconUrl: 'icons/icon48.png',
-      title: 'Jotty Clipper Error',
-      message: error.message || 'Failed to save to Jotty'
-    });
   }
 }
 
