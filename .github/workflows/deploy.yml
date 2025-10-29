@@ -25,14 +25,28 @@ jobs:
         run: |
           npm run sync-version
 
-      - name: Create ZIP package
+      - name: Create Chrome package
         run: |
-          zip -r jotty-clipper-${{ github.ref_name }}.zip manifest.json popup.html options.html background.js style/ js/ icons/
+          cp manifest-chrome.json manifest.json
+          npm run sync-version
+          zip -r jotty-clipper-chrome-${{ github.ref_name }}.zip manifest.json popup.html options.html background.js style/ js/ icons/ package.json sync-version.js
+
+      - name: Create Firefox package
+        run: |
+          cp manifest-firefox.json manifest.json
+          npm run sync-version
+          zip -r jotty-clipper-firefox-${{ github.ref_name }}.zip manifest.json popup.html options.html background.js style/ js/ icons/ package.json sync-version.js
+
+      - name: Restore original manifest
+        run: |
+          cp manifest-chrome.json manifest.json
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: jotty-clipper-${{ github.ref_name }}.zip
+          files: |
+            jotty-clipper-chrome-${{ github.ref_name }}.zip
+            jotty-clipper-firefox-${{ github.ref_name }}.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
