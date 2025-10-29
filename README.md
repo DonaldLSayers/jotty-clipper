@@ -1,6 +1,6 @@
 # Jotty Clipper
 
-A Chrome extension for clipping web content to your Jotty notes with intelligent extraction for popular websites.
+A Chrome extension for clipping web content to your [Jotty](https://github.com/fccview/jotty) notes with intelligent extraction for popular websites.
 
 ## Features
 
@@ -61,6 +61,10 @@ Right-click on any page element:
 - **Clip page to Jotty**: Saves the entire page
 - **Clip image to Jotty**: Saves an image with its URL
 - **Clip link to Jotty**: Saves a link reference
+
+## About Jotty
+
+[Jotty](https://github.com/fccview/jotty) is a modern note-taking and checklist application. This extension allows you to quickly save web content to your Jotty notes with smart extraction tailored to each website.
 
 ## Site-Specific Features
 
@@ -135,7 +139,8 @@ jotty-clipper/
 ├── options.js            # Settings logic
 ├── content.js            # Content extraction scripts
 ├── background.js         # Background service worker
-├── globals.css           # Shared styles
+├── README.md             # Documentation
+├── README_EXTRACTORS.md  # Guide for adding extractors
 └── icons/                # Extension icons
     ├── icon16.png
     ├── icon48.png
@@ -144,32 +149,13 @@ jotty-clipper/
 
 ### Adding New Site Extractors
 
-To add support for a new website, edit `content.js` and add a new extractor:
-
-```javascript
-extractors['example.com'] = {
-  name: 'Example Site',
-  extract: () => {
-    const result = {
-      title: '',
-      content: '',
-      metadata: {}
-    };
-
-    // Your extraction logic here
-    result.title = document.querySelector('h1').textContent;
-    result.content = document.querySelector('article').innerText;
-
-    return result;
-  }
-};
-```
+See [README_EXTRACTORS.md](README_EXTRACTORS.md) for a comprehensive guide on adding custom extractors for new websites.
 
 ## API Requirements
 
 Your Jotty instance must support the following API endpoints:
 
-- `GET /api/categories` - List all categories
+- `GET /api/notes` - List all notes (used to fetch categories)
 - `POST /api/notes` - Create a new note
 
 ### Note Creation Request Format
@@ -178,16 +164,11 @@ Your Jotty instance must support the following API endpoints:
 {
   "title": "Note title",
   "content": "Note content in markdown",
-  "categoryId": "category-uuid",
-  "metadata": {
-    "source": "jotty-clipper",
-    "url": "https://source-url.com",
-    "clipType": "auto|full|selection",
-    "clippedAt": "2025-10-28T00:00:00.000Z",
-    "type": "reddit-post|youtube-video|etc"
-  }
+  "category": "Category Name"
 }
 ```
+
+**Authentication:** Uses `x-api-key` header with your Jotty API key.
 
 ## Troubleshooting
 
@@ -236,6 +217,6 @@ Contributions are welcome! Please feel free to submit pull requests or open issu
 - Context menu integration
 - Configurable settings
 
-## Credits
+## Related Projects
 
-Created for use with [Jotty](https://github.com/your-jotty-repo) - A modern note-taking application
+- **[Jotty](https://github.com/fccview/jotty)** - The note-taking application this extension is built for
