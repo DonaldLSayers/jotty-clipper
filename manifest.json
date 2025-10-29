@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Jotty Clipper",
-  "version": "1.0.1.1",
+  "version": "1.0.2",
   "description": "Clip web content to your Jotty notes with smart extraction for Reddit, YouTube, and more",
   "permissions": [
     "storage",
