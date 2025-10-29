@@ -1,6 +1,9 @@
 // Background service worker for Jotty Clipper
 // Handles API communication and context menu
 
+// Import browser polyfill for Chrome compatibility
+importScripts('js/browser-polyfill.min.js');
+
 console.log('Jotty Clipper background script loading...');
 
 /**
