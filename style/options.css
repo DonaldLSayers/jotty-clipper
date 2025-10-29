@@ -228,7 +228,7 @@ select.input {
 }
 
 .btn-primary:hover {
-  background-color: rgba(var(--primary), 0.9);
+  background-color: rgba(var(--primary)/ 0.9);
   box-shadow: 0 4px 12px rgba(var(--ring), 0.3);
 }
 
