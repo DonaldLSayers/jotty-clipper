@@ -28,7 +28,8 @@
     "128": "icons/icon128.png"
   },
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["js/browser-polyfill.min.js", "background.js"],
+    "persistent": false
   },
   "browser_specific_settings": {
     "gecko": {
