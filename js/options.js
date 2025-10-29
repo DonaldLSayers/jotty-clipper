@@ -1,101 +1,47 @@
 // Options page script for Jotty Clipper
 
 document.addEventListener('DOMContentLoaded', () => {
-  loadSettings();
+  loadOptionsSettings();
   setupEventListeners();
+
+  lucide.createIcons();
 });
 
-// Load saved settings
-async function loadSettings() {
-  const settings = await chrome.storage.sync.get([
-    'jottyUrl',
-    'jottyApiKey',
-    'defaultCategory',
-    'includeMetadata',
-    'includeImages',
-    'autoTag'
-  ]);
-
-  // Set form values
-  document.getElementById('jotty-url').value = settings.jottyUrl || '';
-  document.getElementById('api-key').value = settings.jottyApiKey || '';
-  document.getElementById('include-metadata').checked = settings.includeMetadata !== false;
-  document.getElementById('include-images').checked = settings.includeImages !== false;
-  document.getElementById('auto-tag').checked = settings.autoTag !== false;
-
-  // Load categories if API is configured
-  if (settings.jottyUrl && settings.jottyApiKey) {
-    await loadCategories(settings.jottyUrl, settings.jottyApiKey, settings.defaultCategory);
-  }
-}
-
-// Load categories from Jotty API
-async function loadCategories(url, apiKey, defaultCategory) {
+/**
+ * Set the default category in the select element
+ * @param {Object[]} categories - The categories to set in the select element
+ * @param {string} defaultCategory - The default category to set in the select element
+ * @returns {void}
+ */
+const setDefaultCategory = (categories, defaultCategory) => {
   const categorySelect = document.getElementById('default-category');
-
-  try {
-    // Fetch only notes to extract categories (not checklists)
-    const notesRes = await fetch(`${url}/api/notes`, {
-      headers: {
-        'x-api-key': apiKey,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!notesRes.ok) {
-      throw new Error('Failed to fetch notes');
+  categorySelect.innerHTML = '<option value="">No default (prompt each time)</option>';
+  
+  categories?.forEach(category => {
+    const option = document.createElement('option');
+    option.value = category.path;
+    option.textContent = category.name;
+    if (defaultCategory && category.path === defaultCategory) {
+      option.selected = true;
     }
-
-    // Extract unique categories from notes only
-    const categories = new Set();
-
-    const notesData = await notesRes.json();
-    notesData.notes?.forEach(item => {
-      if (item.category && item.category.trim() !== '') {
-        categories.add(item.category);
-      }
-    });
-
-    // Only show categories that actually exist in notes
-    // No hardcoded defaults
-
-    // Populate select
-    categorySelect.innerHTML = '<option value="">No default (prompt each time)</option>';
-
-    Array.from(categories).sort().forEach(category => {
-      const option = document.createElement('option');
-      option.value = category;
-      option.textContent = category;
-      if (defaultCategory && category === defaultCategory) {
-        option.selected = true;
-      }
-      categorySelect.appendChild(option);
-    });
-  } catch (error) {
-    console.error('Error loading categories:', error);
-    showStatus('Failed to load categories', 'error');
-  }
+    categorySelect.appendChild(option);
+  });
 }
 
-// Setup event listeners
-function setupEventListeners() {
-  // Form submission
+/**
+ * Setup event listeners
+ * @returns {void}
+ */
+const setupEventListeners = () => {
   document.getElementById('settings-form').addEventListener('submit', handleSave);
-
-  // Test connection button
   document.getElementById('test-connection').addEventListener('click', testConnection);
-
-  // Reset button
   document.getElementById('reset-btn').addEventListener('click', resetSettings);
-
-  // Toggle password visibility
   document.getElementById('toggle-password').addEventListener('click', () => {
     const input = document.getElementById('api-key');
     const type = input.type === 'password' ? 'text' : 'password';
     input.type = type;
   });
 
-  // Reload categories when URL or API key changes
   const urlInput = document.getElementById('jotty-url');
   const apiKeyInput = document.getElementById('api-key');
 
@@ -112,8 +58,12 @@ function setupEventListeners() {
   apiKeyInput.addEventListener('blur', reloadCategories);
 }
 
-// Handle save
-async function handleSave(e) {
+/**
+ * Handle save
+ * @param {Event} e - The event object
+ * @returns {void}
+ */
+const handleSave = async (e) => {
   e.preventDefault();
 
   const settings = {
@@ -125,7 +75,6 @@ async function handleSave(e) {
     autoTag: document.getElementById('auto-tag').checked
   };
 
-  // Validate
   if (!settings.jottyUrl) {
     showStatus('Please enter your Jotty URL', 'error');
     return;
@@ -137,7 +86,6 @@ async function handleSave(e) {
   }
 
   try {
-    // Test connection before saving
     await fetch(`${settings.jottyUrl}/api/notes`, {
       headers: {
         'x-api-key': settings.jottyApiKey,
@@ -149,12 +97,10 @@ async function handleSave(e) {
       }
     });
 
-    // Save settings
-    await chrome.storage.sync.set(settings);
+    await browser.storage.sync.set(settings);
 
     showStatus('Settings saved successfully!', 'success');
 
-    // Update manifest's host permissions if needed
     console.log('Settings saved:', settings);
   } catch (error) {
     console.error('Error saving settings:', error);
@@ -162,8 +108,11 @@ async function handleSave(e) {
   }
 }
 
-// Test connection
-async function testConnection() {
+/**
+ * Test connection
+ * @returns {void}
+ */
+const testConnection = async () => {
   const url = document.getElementById('jotty-url').value.trim().replace(/\/$/, '');
   const apiKey = document.getElementById('api-key').value.trim();
 
@@ -192,7 +141,6 @@ async function testConnection() {
     await response.json();
     showStatus(`Connection successful! API is accessible.`, 'success');
 
-    // Reload categories
     await loadCategories(url, apiKey);
 
   } catch (error) {
@@ -204,31 +152,19 @@ async function testConnection() {
   }
 }
 
-// Reset settings
-async function resetSettings() {
+/**
+ * Reset settings
+ * @returns {void}
+ */
+const resetSettings = async () => {
   if (!confirm('Are you sure you want to reset all settings to defaults?')) {
     return;
   }
 
-  await chrome.storage.sync.clear();
+  await browser.storage.sync.clear();
 
-  // Reset form
   document.getElementById('settings-form').reset();
   document.getElementById('default-category').innerHTML = '<option value="">No default (prompt each time)</option>';
 
   showStatus('Settings reset to defaults', 'info');
-}
-
-// Show status message
-function showStatus(message, type = 'success') {
-  const statusEl = document.getElementById('status-message');
-  statusEl.textContent = message;
-  statusEl.className = `status-message ${type}`;
-
-  // Scroll to top to show message
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-
-  setTimeout(() => {
-    statusEl.classList.add('hidden');
-  }, 5000);
 }
