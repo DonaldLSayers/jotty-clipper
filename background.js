@@ -3,12 +3,13 @@
 
 console.log('Jotty Clipper background script loading...');
 
-// Initialize on install
+/**
+ * Initialise on install
+ */
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Jotty Clipper installed');
 
   try {
-    // Create context menu items
     chrome.contextMenus.create({
       id: 'clip-selection',
       title: 'Clip selection to Jotty',
@@ -39,23 +40,27 @@ chrome.runtime.onInstalled.addListener(() => {
   }
 });
 
-// Handle context menu clicks
+/**
+ * Handle context menu clicks
+ */
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   handleContextMenuClick(info, tab);
 });
 
-// Inject content script if not already injected
+/**
+ * Inject the content script if not already injected
+ * @param {number} tabId - The ID of the tab to inject the content script into
+ * @returns {Promise<boolean>} - True if the content script was injected, false otherwise
+ */
 async function ensureContentScript(tabId) {
   try {
-    // Try to ping the content script
     await chrome.tabs.sendMessage(tabId, { action: 'ping' });
-    return true; // Already injected
+    return true;
   } catch (error) {
-    // Not injected, inject it now
     try {
       await chrome.scripting.executeScript({
         target: { tabId: tabId },
-        files: ['content.js']
+        files: ['js/content.js']
       });
       return true;
     } catch (injectError) {
@@ -65,7 +70,12 @@ async function ensureContentScript(tabId) {
   }
 }
 
-// Handle context menu actions
+/**
+ * Handle context menu actions
+ * @param {Object} info - The information about the context menu item
+ * @param {Object} tab - The tab that the context menu was clicked in
+ * @returns {Promise<void>}
+ */
 async function handleContextMenuClick(info, tab) {
   try {
     const settings = await chrome.storage.sync.get(['jottyUrl', 'jottyApiKey', 'defaultCategory']);
@@ -95,7 +105,6 @@ async function handleContextMenuClick(info, tab) {
         break;
 
       case 'clip-page':
-        // Ensure content script is injected before extracting
         try {
           await ensureContentScript(tab.id);
           const response = await chrome.tabs.sendMessage(tab.id, {
@@ -115,7 +124,6 @@ async function handleContextMenuClick(info, tab) {
         break;
     }
 
-    // Save to Jotty
     await saveToJotty({
       title,
       content,
@@ -127,41 +135,5 @@ async function handleContextMenuClick(info, tab) {
     console.error('Error in handleContextMenuClick:', error);
   }
 }
-
-// Save content to Jotty API
-async function saveToJotty(data) {
-  // Add source URL to content
-  const contentWithSource = `**Source:** ${data.url}\n**Clipped:** ${new Date().toLocaleString()}\n\n---\n\n${data.content}`;
-
-  const response = await fetch(`${data.settings.jottyUrl}/api/notes`, {
-    method: 'POST',
-    headers: {
-      'x-api-key': data.settings.jottyApiKey,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      title: data.title,
-      content: contentWithSource,
-      category: data.categoryId
-    })
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.error || error.message || 'Failed to save to Jotty');
-  }
-
-  return response.json();
-}
-
-// Handle messages from content scripts or popup
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
-  if (request.action === 'saveToJotty') {
-    saveToJotty(request.data)
-      .then(result => sendResponse({ success: true, result }))
-      .catch(error => sendResponse({ success: false, error: error.message }));
-    return true; // Will respond asynchronously
-  }
-});
 
 console.log('Jotty Clipper background script loaded successfully');
