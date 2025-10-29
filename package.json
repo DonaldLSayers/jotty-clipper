@@ -1,0 +1,11 @@
+{
+  "name": "jotty-clipper",
+  "version": "1.0.2",
+  "description": "Clip web content to your Jotty notes with smart extraction",
+  "scripts": {
+    "sync-version": "node sync-version.js",
+    "build": "npm run sync-version"
+  },
+  "devDependencies": {},
+  "private": true
+}
