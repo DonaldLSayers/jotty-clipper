@@ -6,7 +6,7 @@ let currentTab = null;
  * @returns {void}
  */
 document.addEventListener('DOMContentLoaded', async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [tab] = await browser.tabs.query({ active: true, currentWindow: true });
   currentTab = tab;
 
   await loadPopupSettings();
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  * @returns {void}
  */
 const populateCategorySelect = async () => {
-  const settings = await chrome.storage.sync.get(['jottyUrl', 'jottyApiKey', 'defaultCategory']);
+  const settings = await browser.storage.sync.get(['jottyUrl', 'jottyApiKey', 'defaultCategory']);
   const categorySelect = document.getElementById('category-select');
   const categories = await loadCategories(settings.jottyUrl, settings.jottyApiKey);
 
@@ -70,12 +70,12 @@ const ensureContentScript = async () => {
 
   try {
     // Try to ping the content script
-    await chrome.tabs.sendMessage(currentTab.id, { action: 'ping' });
+    await browser.tabs.sendMessage(currentTab.id, { action: 'ping' });
     return true; // Already injected
   } catch (error) {
     // Not injected, inject it now
     try {
-      await chrome.scripting.executeScript({
+      await browser.scripting.executeScript({
         target: { tabId: currentTab.id },
         files: ['content.js']
       });
@@ -97,7 +97,7 @@ const detectPageInfo = async () => {
   await ensureContentScript();
 
   try {
-    const response = await chrome.tabs.sendMessage(currentTab.id, {
+    const response = await browser.tabs.sendMessage(currentTab.id, {
       action: 'getPageInfo',
       clipType: selectedClipType
     });
@@ -139,12 +139,12 @@ const setupEventListeners = () => {
   document.getElementById('clip-btn').addEventListener('click', handleClip);
 
   document.getElementById('settings-btn').addEventListener('click', () => {
-    chrome.runtime.openOptionsPage();
+    browser.runtime.openOptionsPage();
   });
 
   document.getElementById('view-settings').addEventListener('click', (e) => {
     e.preventDefault();
-    chrome.runtime.openOptionsPage();
+    browser.runtime.openOptionsPage();
   });
 }
 
@@ -183,7 +183,7 @@ const handleClip = async () => {
   try {
     await ensureContentScript();
 
-    const response = await chrome.tabs.sendMessage(currentTab.id, {
+    const response = await browser.tabs.sendMessage(currentTab.id, {
       action: 'extractContent',
       clipType: selectedClipType
     });

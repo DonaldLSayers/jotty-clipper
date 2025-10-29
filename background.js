@@ -6,29 +6,29 @@ console.log('Jotty Clipper background script loading...');
 /**
  * Initialise on install
  */
-chrome.runtime.onInstalled.addListener(() => {
+browser.runtime.onInstalled.addListener(() => {
   console.log('Jotty Clipper installed');
 
   try {
-    chrome.contextMenus.create({
+    browser.contextMenus.create({
       id: 'clip-selection',
       title: 'Clip selection to Jotty',
       contexts: ['selection']
     });
 
-    chrome.contextMenus.create({
+    browser.contextMenus.create({
       id: 'clip-page',
       title: 'Clip page to Jotty',
       contexts: ['page']
     });
 
-    chrome.contextMenus.create({
+    browser.contextMenus.create({
       id: 'clip-image',
       title: 'Clip image to Jotty',
       contexts: ['image']
     });
 
-    chrome.contextMenus.create({
+    browser.contextMenus.create({
       id: 'clip-link',
       title: 'Clip link to Jotty',
       contexts: ['link']
@@ -43,7 +43,7 @@ chrome.runtime.onInstalled.addListener(() => {
 /**
  * Handle context menu clicks
  */
-chrome.contextMenus.onClicked.addListener((info, tab) => {
+browser.contextMenus.onClicked.addListener((info, tab) => {
   handleContextMenuClick(info, tab);
 });
 
@@ -54,11 +54,11 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
  */
 async function ensureContentScript(tabId) {
   try {
-    await chrome.tabs.sendMessage(tabId, { action: 'ping' });
+    await browser.tabs.sendMessage(tabId, { action: 'ping' });
     return true;
   } catch (error) {
     try {
-      await chrome.scripting.executeScript({
+      await browser.scripting.executeScript({
         target: { tabId: tabId },
         files: ['js/content.js']
       });
@@ -78,7 +78,7 @@ async function ensureContentScript(tabId) {
  */
 async function handleContextMenuClick(info, tab) {
   try {
-    const settings = await chrome.storage.sync.get(['jottyUrl', 'jottyApiKey', 'defaultCategory']);
+    const settings = await browser.storage.sync.get(['jottyUrl', 'jottyApiKey', 'defaultCategory']);
 
     if (!settings.jottyUrl || !settings.jottyApiKey) {
       console.error('Jotty Clipper: API settings not configured');
@@ -107,7 +107,7 @@ async function handleContextMenuClick(info, tab) {
       case 'clip-page':
         try {
           await ensureContentScript(tab.id);
-          const response = await chrome.tabs.sendMessage(tab.id, {
+          const response = await browser.tabs.sendMessage(tab.id, {
             action: 'extractContent',
             clipType: 'auto'
           });

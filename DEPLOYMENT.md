@@ -5,7 +5,8 @@ This guide explains how to set up automated deployment to the Chrome Web Store v
 ## Prerequisites
 
 1. **Chrome Web Store Developer Account** - $5 one-time fee
-   - Sign up at: https://chrome.google.com/webstore/devconsole
+
+   - Sign up at: https://browser.google.com/webstore/devconsole
 
 2. **First Manual Upload Required**
    - You must upload the extension manually once to get an Extension ID
@@ -13,7 +14,7 @@ This guide explains how to set up automated deployment to the Chrome Web Store v
 
 ## Step 1: Initial Manual Upload
 
-1. Go to [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
+1. Go to [Chrome Web Store Developer Dashboard](https://browser.google.com/webstore/devconsole)
 2. Click "New Item"
 3. Upload `jotty-clipper-v1.0.0.zip`
 4. Fill in the store listing:
@@ -103,12 +104,12 @@ print(f"\nRefresh Token: {tokens['refresh_token']}")
 2. Click Settings → Secrets and variables → Actions
 3. Click "New repository secret" and add these four secrets:
 
-| Secret Name | Value |
-|-------------|-------|
-| `CHROME_EXTENSION_ID` | Your extension ID (from Step 1) |
-| `CHROME_CLIENT_ID` | Your OAuth client ID (from Step 2.2) |
+| Secret Name            | Value                                    |
+| ---------------------- | ---------------------------------------- |
+| `CHROME_EXTENSION_ID`  | Your extension ID (from Step 1)          |
+| `CHROME_CLIENT_ID`     | Your OAuth client ID (from Step 2.2)     |
 | `CHROME_CLIENT_SECRET` | Your OAuth client secret (from Step 2.2) |
-| `CHROME_REFRESH_TOKEN` | Your refresh token (from Step 2.3) |
+| `CHROME_REFRESH_TOKEN` | Your refresh token (from Step 2.3)       |
 
 ## Step 4: Test the Deployment
 
@@ -127,6 +128,7 @@ print(f"\nRefresh Token: {tokens['refresh_token']}")
    ```
 
 The GitHub Action will automatically:
+
 - Create a ZIP file
 - Upload it to Chrome Web Store
 - Create a GitHub Release with the ZIP attached
@@ -136,6 +138,7 @@ The GitHub Action will automatically:
 The workflow (`.github/workflows/deploy.yml`) triggers when you push a tag starting with `v` (like `v1.0.1`).
 
 It will:
+
 1. ✅ Package the extension as a ZIP
 2. ✅ Upload to Chrome Web Store (as draft)
 3. ✅ Create a GitHub Release
@@ -146,7 +149,7 @@ It will:
 
 After the GitHub Action uploads:
 
-1. Go to [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
+1. Go to [Chrome Web Store Developer Dashboard](https://browser.google.com/webstore/devconsole)
 2. Your extension will have a new draft version
 3. Review the changes
 4. Click "Submit for review"
@@ -155,15 +158,18 @@ After the GitHub Action uploads:
 ## Troubleshooting
 
 ### "Extension ID not found"
+
 - Make sure you've done the initial manual upload
 - Verify the Extension ID is correct in GitHub secrets
 
 ### "Invalid credentials"
+
 - Regenerate your OAuth credentials
 - Get a new refresh token
 - Update GitHub secrets
 
 ### "Quota exceeded"
+
 - Chrome Web Store API has rate limits
 - Wait a few hours and try again
 
@@ -180,6 +186,6 @@ If you prefer manual deployment:
 
 ## Resources
 
-- [Chrome Web Store Publish API](https://developer.chrome.com/docs/webstore/using_webstore_api/)
+- [Chrome Web Store Publish API](https://developer.browser.com/docs/webstore/using_webstore_api/)
 - [Google OAuth 2.0](https://developers.google.com/identity/protocols/oauth2)
 - [chrome-webstore-upload](https://github.com/fregante/chrome-webstore-upload)

@@ -97,7 +97,7 @@ const handleSave = async (e) => {
       }
     });
 
-    await chrome.storage.sync.set(settings);
+    await browser.storage.sync.set(settings);
 
     showStatus('Settings saved successfully!', 'success');
 
@@ -161,7 +161,7 @@ const resetSettings = async () => {
     return;
   }
 
-  await chrome.storage.sync.clear();
+  await browser.storage.sync.clear();
 
   document.getElementById('settings-form').reset();
   document.getElementById('default-category').innerHTML = '<option value="">No default (prompt each time)</option>';

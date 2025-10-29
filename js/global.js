@@ -49,7 +49,7 @@ const loadCategories = async (url, apiKey) => {
  * @returns {Promise<void>}
  */
 const loadOptionsSettings = async () => {
-    const settings = await chrome.storage.sync.get([
+    const settings = await browser.storage.sync.get([
       'jottyUrl',
       'jottyApiKey',
       'defaultCategory',
@@ -75,7 +75,7 @@ const loadOptionsSettings = async () => {
  * @returns {Promise<Object>} - The settings
  */
 const loadPopupSettings = async () => {
-    const settings = await chrome.storage.sync.get(['jottyUrl', 'jottyApiKey', 'defaultCategory']);
+    const settings = await browser.storage.sync.get(['jottyUrl', 'jottyApiKey', 'defaultCategory']);
 
     if (!settings.jottyUrl || !settings.jottyApiKey) {
         showStatus('Please configure your API settings first', 'error');
@@ -91,7 +91,7 @@ const loadPopupSettings = async () => {
  * @returns {Promise<Object>} - The response from the Jotty API
  */
 const saveToJotty = async (data) => {
-    const settings = await chrome.storage.sync.get(['jottyUrl', 'jottyApiKey']);
+    const settings = await browser.storage.sync.get(['jottyUrl', 'jottyApiKey']);
     const contentWithSource = `**Source:** ${data.url}\n**Clipped:** ${new Date().toLocaleString()}\n\n---\n\n${data.content}`;
   
     const response = await fetch(`${settings.jottyUrl}/api/notes`, {
@@ -138,7 +138,7 @@ const showStatus = (message, type = 'success') => {
  * @returns {Promise<Object>} - The user style
  */
 const getUser = async () => {
-  const settings = await chrome.storage.sync.get(['jottyUrl', 'jottyApiKey']);
+  const settings = await browser.storage.sync.get(['jottyUrl', 'jottyApiKey']);
   if (!settings.jottyUrl || !settings.jottyApiKey) {
     return null;
   }
