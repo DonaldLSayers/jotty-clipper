@@ -16,6 +16,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Sync version numbers
+        run: |
+          npm run sync-version
+
       - name: Create ZIP package
         run: |
           zip -r jotty-clipper-${{ github.ref_name }}.zip manifest.json popup.html options.html background.js style/ js/ icons/
