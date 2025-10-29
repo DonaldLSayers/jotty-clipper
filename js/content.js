@@ -821,7 +821,7 @@ function genericExtract(clipType) {
 }
 
 // Listen for messages from popup
-chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.action === 'ping') {
     sendResponse({ status: 'ready' });
     return true;

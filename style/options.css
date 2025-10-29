@@ -1,30 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-:root {
-  --background: #0c1435;
-  --background-secondary: #2f0e5b;
-  --foreground: #f3f4f6;
-  --primary: #8b3bd0;
-  --primary-foreground: #f3f4f6;
-  --secondary: #2f0e5b;
-  --muted-foreground: #a39caf;
-  --border: #262f3f;
-  --ring: #8b3bd0;
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--background);
-  color: var(--foreground);
-  line-height: 1.6;
-  min-height: 100vh;
-}
+@import url('./global.css');
 
 .container {
   max-width: 800px;
@@ -35,7 +9,7 @@ body {
 .header {
   margin-bottom: 40px;
   padding-bottom: 24px;
-  border-bottom: 2px solid var(--border);
+  border-bottom: 2px solid rgb(var(--border));
 }
 
 .title-group {
@@ -46,26 +20,24 @@ body {
 }
 
 .logo {
-  color: var(--primary);
+  color: rgb(var(--primary));
   flex-shrink: 0;
 }
 
 h1 {
   font-size: 32px;
   font-weight: 700;
-  color: var(--foreground);
+  color: rgb(var(--foreground));
   margin: 0;
 }
 
 .subtitle {
-  font-size: 16px;
-  color: var(--muted-foreground);
-  margin-left: 48px;
+  color: rgb(var(--muted-foreground));
 }
 
 .section {
-  background-color: rgba(47, 14, 91, 0.3);
-  border: 1px solid var(--border);
+  background-color: rgb(var(--card));
+  border: 1px solid rgb(var(--border));
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 24px;
@@ -75,12 +47,12 @@ h1 {
   font-size: 20px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: var(--foreground);
+  color: rgb(var(--foreground));
 }
 
 .section-description {
   font-size: 14px;
-  color: var(--muted-foreground);
+  color: rgb(var(--muted-foreground));
   margin-bottom: 20px;
 }
 
@@ -97,21 +69,21 @@ label {
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 8px;
-  color: var(--foreground);
+  color: rgb(var(--foreground));
 }
 
 .required {
-  color: #ef4444;
+  color: rgb(var(--destructive));
   margin-left: 4px;
 }
 
 .input {
   width: 100%;
   padding: 12px 14px;
-  background-color: var(--secondary);
-  border: 1px solid var(--border);
+  background-color: rgb(var(--background-secondary));
+  border: 1px solid rgb(var(--border));
   border-radius: 8px;
-  color: var(--foreground);
+  color: rgb(var(--foreground));
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -119,12 +91,12 @@ label {
 
 .input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(139, 59, 208, 0.1);
+  border-color: rgb(var(--primary));
+  box-shadow: 0 0 0 3px rgba(var(--ring), 0.2);
 }
 
 .input::placeholder {
-  color: var(--muted-foreground);
+  color: rgb(var(--muted-foreground));
 }
 
 .password-input {
@@ -142,7 +114,7 @@ label {
   right: 10px;
   background: none;
   border: none;
-  color: var(--muted-foreground);
+  color: rgb(var(--muted-foreground));
   cursor: pointer;
   padding: 8px;
   display: flex;
@@ -153,8 +125,8 @@ label {
 }
 
 .toggle-password:hover {
-  color: var(--foreground);
-  background-color: rgba(255, 255, 255, 0.05);
+  color: rgb(var(--foreground));
+  background-color: rgba(var(--foreground), 0.05);
 }
 
 .select-wrapper {
@@ -171,7 +143,7 @@ label {
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 5px solid var(--foreground);
+  border-top: 5px solid rgb(var(--foreground));
   pointer-events: none;
 }
 
@@ -183,7 +155,7 @@ select.input {
 
 .help-text {
   font-size: 13px;
-  color: var(--muted-foreground);
+  color: rgb(var(--muted-foreground));
   margin-top: 6px;
   line-height: 1.4;
 }
@@ -207,30 +179,30 @@ select.input {
 .checkbox-custom {
   width: 20px;
   height: 20px;
-  border: 2px solid var(--border);
+  border: 2px solid rgb(var(--border));
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--secondary);
+  background-color: rgb(var(--background-secondary));
   transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .checkbox-label:hover .checkbox-custom {
-  border-color: var(--primary);
+  border-color: rgb(var(--primary));
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom {
-  background-color: var(--primary);
-  border-color: var(--primary);
+  background-color: rgb(var(--primary));
+  border-color: rgb(var(--primary));
 }
 
 .checkbox-label input[type="checkbox"]:checked + .checkbox-custom::after {
   content: '';
   width: 5px;
   height: 10px;
-  border: solid var(--primary-foreground);
+  border: solid rgb(var(--primary-foreground));
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
@@ -251,13 +223,13 @@ select.input {
 }
 
 .btn-primary {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
+  background-color: rgb(var(--primary));
+  color: rgb(var(--primary-foreground));
 }
 
 .btn-primary:hover {
-  background-color: #9d4ee6;
-  box-shadow: 0 4px 12px rgba(139, 59, 208, 0.3);
+  background-color: rgba(var(--primary), 0.9);
+  box-shadow: 0 4px 12px rgba(var(--ring), 0.3);
 }
 
 .btn-primary:active {
@@ -265,14 +237,14 @@ select.input {
 }
 
 .btn-secondary {
-  background-color: var(--secondary);
-  color: var(--foreground);
-  border: 1px solid var(--border);
+  background-color: rgb(var(--secondary));
+  color: rgb(var(--secondary-foreground));
+  border: 1px solid rgb(var(--border));
 }
 
 .btn-secondary:hover {
-  background-color: rgba(47, 14, 91, 0.6);
-  border-color: var(--primary);
+  background-color: rgb(var(--accent));
+  border-color: rgb(var(--primary));
 }
 
 .btn:disabled {
@@ -286,7 +258,7 @@ select.input {
   justify-content: flex-end;
   margin-top: 32px;
   padding-top: 24px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgb(var(--border));
 }
 
 .status-message {
@@ -301,21 +273,21 @@ select.input {
 }
 
 .status-message.success {
-  background-color: rgba(34, 197, 94, 0.1);
-  border: 1px solid rgba(34, 197, 94, 0.3);
-  color: #4ade80;
+  background-color: rgba(var(--primary), 0.1);
+  border: 1px solid rgba(var(--primary), 0.3);
+  color: rgb(var(--primary));
 }
 
 .status-message.error {
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  color: #f87171;
+  background-color: rgba(var(--destructive), 0.1);
+  border: 1px solid rgba(var(--destructive), 0.3);
+  color: rgb(var(--destructive));
 }
 
 .status-message.info {
-  background-color: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: #60a5fa;
+  background-color: rgb(var(--accent));
+  border: 1px solid rgb(var(--border));
+  color: rgb(var(--accent-foreground));
 }
 
 .status-message.hidden {
@@ -337,8 +309,8 @@ select.input {
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: var(--primary-foreground);
+  border: 2px solid rgba(var(--primary-foreground), 0.3);
+  border-top-color: rgb(var(--primary-foreground));
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
