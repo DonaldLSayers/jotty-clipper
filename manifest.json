@@ -9,6 +9,10 @@
     "scripting",
     "contextMenus"
   ],
+  "host_permissions": [
+    "http://*/",
+    "https://*/"
+  ],
   "options_page": "options.html",
   "action": {
     "default_popup": "popup.html",
