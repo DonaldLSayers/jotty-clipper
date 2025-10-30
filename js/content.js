@@ -1,6 +1,25 @@
 // Content script for Jotty Clipper - runs on all pages
 // Uses Mozilla Readability.js for clean content extraction with fallbacks for specific sites
 
+// Helper function to determine platform from URL
+const getPlatformFromUrl = (url) => {
+  const urlLower = url.toLowerCase();
+  if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) return 'YouTube';
+  if (urlLower.includes('twitch.tv')) return 'Twitch';
+  if (urlLower.includes('twitter.com') || urlLower.includes('x.com')) return 'X/Twitter';
+  if (urlLower.includes('instagram.com')) return 'Instagram';
+  if (urlLower.includes('tiktok.com')) return 'TikTok';
+  if (urlLower.includes('github.com')) return 'GitHub';
+  if (urlLower.includes('stackoverflow.com')) return 'Stack Overflow';
+  if (urlLower.includes('medium.com')) return 'Medium';
+  if (urlLower.includes('wikipedia.org')) return 'Wikipedia';
+  try {
+    return new URL(url).hostname;
+  } catch (e) {
+    return 'External Website';
+  }
+};
+
 // Site-specific extractors - only for sites that need special handling
 const extractors = {
   // YouTube extractor - keep this as Readability doesn't handle video metadata well
@@ -142,30 +161,8 @@ const extractors = {
 
       return result;
     }
-  }
-};
+  },
 
-// Helper function to determine platform from URL
-const getPlatformFromUrl = (url) => {
-  const urlLower = url.toLowerCase();
-  if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) return 'YouTube';
-  if (urlLower.includes('twitch.tv')) return 'Twitch';
-  if (urlLower.includes('twitter.com') || urlLower.includes('x.com')) return 'X/Twitter';
-  if (urlLower.includes('instagram.com')) return 'Instagram';
-  if (urlLower.includes('tiktok.com')) return 'TikTok';
-  if (urlLower.includes('github.com')) return 'GitHub';
-  if (urlLower.includes('stackoverflow.com')) return 'Stack Overflow';
-  if (urlLower.includes('medium.com')) return 'Medium';
-  if (urlLower.includes('wikipedia.org')) return 'Wikipedia';
-  try {
-    return new URL(url).hostname;
-  } catch (e) {
-    return 'External Website';
-  }
-};
-
-// Site-specific extractors - only for sites that need special handling
-const extractors = {
   // Amazon extractor - Amazon has specific product data structure that needs special handling
   'amazon.com': {
     name: 'Amazon',
@@ -347,6 +344,88 @@ const extractors = {
     }
   },
 
+  // Amazon international sites
+  'amazon.co.uk': {
+    name: 'Amazon UK',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.ca': {
+    name: 'Amazon Canada',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.de': {
+    name: 'Amazon Germany',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.fr': {
+    name: 'Amazon France',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.es': {
+    name: 'Amazon Spain',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.it': {
+    name: 'Amazon Italy',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.co.jp': {
+    name: 'Amazon Japan',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.cn': {
+    name: 'Amazon China',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.in': {
+    name: 'Amazon India',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.com.mx': {
+    name: 'Amazon Mexico',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.com.br': {
+    name: 'Amazon Brazil',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.com.au': {
+    name: 'Amazon Australia',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.nl': {
+    name: 'Amazon Netherlands',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.se': {
+    name: 'Amazon Sweden',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.pl': {
+    name: 'Amazon Poland',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.tr': {
+    name: 'Amazon Turkey',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.ae': {
+    name: 'Amazon UAE',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.sa': {
+    name: 'Amazon Saudi Arabia',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.eg': {
+    name: 'Amazon Egypt',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.sg': {
+    name: 'Amazon Singapore',
+    extract: () => extractors['amazon.com'].extract()
+  },
+
   // Reddit extractor - Reddit has specific post structure that needs special handling
   'reddit.com': {
     name: 'Reddit',
@@ -460,17 +539,6 @@ const extractors = {
         const formattedContent = convertRedditContent(oldRedditContent).trim();
         if (formattedContent) {
           content += `## Post Content\n\n${formattedContent}\n\n`;
-        }
-      }
-
-      // Last resort: try other common content selectors
-      if (!content.includes('## Post Content')) {
-        const alternativeContent = document.querySelector('shreddit-post div[slot="text-body"], .expando .md, .linkflairrange');
-        if (alternativeContent) {
-          const formattedContent = convertRedditContent(alternativeContent).trim();
-          if (formattedContent) {
-            content += `## Post Content\n\n${formattedContent}\n\n`;
-          }
         }
       }
 
@@ -628,90 +696,39 @@ const extractors = {
       result.content = content.trim() || 'Could not extract post content';
       return result;
     }
-  },
-
-  // Amazon international sites
-  'amazon.co.uk': {
-    name: 'Amazon UK',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.ca': {
-    name: 'Amazon Canada',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.de': {
-    name: 'Amazon Germany',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.fr': {
-    name: 'Amazon France',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.es': {
-    name: 'Amazon Spain',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.it': {
-    name: 'Amazon Italy',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.co.jp': {
-    name: 'Amazon Japan',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.cn': {
-    name: 'Amazon China',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.in': {
-    name: 'Amazon India',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.com.mx': {
-    name: 'Amazon Mexico',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.com.br': {
-    name: 'Amazon Brazil',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.com.au': {
-    name: 'Amazon Australia',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.nl': {
-    name: 'Amazon Netherlands',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.se': {
-    name: 'Amazon Sweden',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.pl': {
-    name: 'Amazon Poland',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.tr': {
-    name: 'Amazon Turkey',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.ae': {
-    name: 'Amazon UAE',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.sa': {
-    name: 'Amazon Saudi Arabia',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.eg': {
-    name: 'Amazon Egypt',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.sg': {
-    name: 'Amazon Singapore',
-    extract: () => extractors['amazon.com'].extract()
   }
 };
+
+// Convert HTML table to Markdown table format
+function convertTableToMarkdown(table) {
+  const rows = Array.from(table.querySelectorAll('tr'));
+  if (rows.length === 0) return '';
+
+  let markdown = '\n';
+  let headerAdded = false;
+
+  rows.forEach((row, rowIndex) => {
+    const cells = Array.from(row.querySelectorAll('th, td'));
+    const cellTexts = cells.map(cell => {
+      let text = cell.textContent.trim();
+      text = text.replace(/\|/g, '\\|'); // Escape pipe characters
+      text = text.replace(/\s+/g, ' '); // Handle multi-line content
+      return text;
+    });
+
+    // Create the markdown row
+    markdown += '| ' + cellTexts.join(' | ') + ' |\n';
+
+    // Add separator row after headers (first row with th elements)
+    if (!headerAdded && (row.querySelector('th') || rowIndex === 0)) {
+      const separators = cellTexts.map(text => '-'.repeat(Math.max(text.length, 3)));
+      markdown += '| ' + separators.join(' | ') + ' |\n';
+      headerAdded = true;
+    }
+  });
+
+  return markdown + '\n';
+}
 
 // Main content extraction using Readability.js
 function extractWithReadability() {
@@ -897,42 +914,6 @@ function convertHTMLToMarkdown(htmlContent) {
   return markdown;
 }
 
-// Convert HTML table to Markdown table format
-function convertTableToMarkdown(table) {
-  const rows = Array.from(table.querySelectorAll('tr'));
-  if (rows.length === 0) return '';
-
-  let markdown = '\n';
-  let headerAdded = false;
-
-  rows.forEach((row, rowIndex) => {
-    const cells = Array.from(row.querySelectorAll('th, td'));
-    const cellTexts = cells.map(cell => {
-      let text = cell.textContent.trim();
-      text = text.replace(/\|/g, '\\|'); // Escape pipe characters
-      text = text.replace(/\s+/g, ' '); // Handle multi-line content
-      return text;
-    });
-
-    // Create the markdown row
-    markdown += '| ' + cellTexts.join(' | ') + ' |\n';
-
-    // Add separator row after headers (first row with th elements)
-    if (!headerAdded && row.querySelector('th')) {
-      const separators = cellTexts.map(text => '-'.repeat(Math.max(text.length, 3)));
-      markdown += '| ' + separators.join(' | ') + ' |\n';
-      headerAdded = true;
-    } else if (!headerAdded && rowIndex === 0) {
-      // If no headers found, add separator after first row
-      const separators = cellTexts.map(text => '-'.repeat(Math.max(text.length, 3)));
-      markdown += '| ' + separators.join(' | ') + ' |\n';
-      headerAdded = true;
-    }
-  });
-
-  return markdown + '\n';
-}
-
 // Handle text selection
 function getSelectionContent() {
   const selection = window.getSelection();
@@ -957,17 +938,12 @@ function getSelectionContent() {
 
 // Find extractor for current site (for specialized sites)
 function findExtractor(hostname) {
-  // Debug: log the hostname to help with debugging
-  console.log('Finding extractor for hostname:', hostname);
-
   // Check for exact domain matches first, then partial matches
   for (const domain in extractors) {
     if (hostname === domain || hostname.includes(domain)) {
-      console.log('Found extractor:', domain, '->', extractors[domain].name);
       return extractors[domain];
     }
   }
-  console.log('No specific extractor found, using Readability');
   return null;
 }
 
@@ -1002,7 +978,6 @@ browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
   if (request.action === 'extractContent') {
     const hostname = new URL(window.location.href).hostname;
-    console.log('Extract content requested for:', hostname, 'clipType:', request.clipType);
     const extractor = findExtractor(hostname);
 
     (async () => {
@@ -1010,14 +985,11 @@ browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         let result;
 
         if (request.clipType === 'selection') {
-          console.log('Using selection extraction');
           result = getSelectionContent();
         } else if (extractor && (request.clipType === 'auto' || request.clipType === 'full')) {
-          console.log('Using specialized extractor:', extractor.name);
-          // Use specialized extractor for auto and full mode on Amazon/YouTube
+          // Use specialized extractor for auto and full mode on Amazon/YouTube/Reddit
           result = await extractor.extract();
         } else {
-          console.log('Using Readability extraction');
           // Use Readability for all other cases
           result = extractWithReadability();
           if (request.clipType === 'full' && result.metadata.type === 'readability-article') {
@@ -1026,8 +998,6 @@ browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
             result = fullResult;
           }
         }
-
-        console.log('Extraction result type:', result.metadata.type);
         sendResponse({
           success: true,
           content: result.content,
