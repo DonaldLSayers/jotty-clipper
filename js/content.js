@@ -115,11 +115,24 @@ const extractors = {
         result.content += `## Description\n\n*No description available*\n`;
       }
 
-      // Get thumbnail - use video ID to construct the correct thumbnail URL
-      // YouTube thumbnail URL format is consistent and reliable
+      // Get embedded video
       if (videoId) {
-        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-        result.content += `\n![Video Thumbnail](${thumbnailUrl})\n`;
+        const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+
+        // Add embedded video player (HTML for proper rendering)
+        result.content += `\n## Video\n\n`;
+        result.content += `<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 20px 0;">\n`;
+        result.content += `  <iframe src="${embedUrl}" \n`;
+        result.content += `          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" \n`;
+        result.content += `          frameborder="0" \n`;
+        result.content += `          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" \n`;
+        result.content += `          allowfullscreen>\n`;
+        result.content += `  </iframe>\n`;
+        result.content += `</div>\n\n`;
+
+        // Also add direct link as fallback
+        result.content += `[Watch on YouTube](${videoUrl})\n\n`;
       }
 
       result.metadata = {
@@ -469,11 +482,26 @@ const extractors = {
       // Get video if present - be selective to avoid sidebar content
       const postContainerForVideo = document.querySelector('shreddit-post, .thing, div[data-testid="post-container"]');
       if (postContainerForVideo) {
-        const video = postContainerForVideo.querySelector('shreddit-player video source, video[src*="redd.it"]');
-        if (video) {
-          const videoSrc = video.src || video.getAttribute('src');
+        const videoElement = postContainerForVideo.querySelector('shreddit-player video source, video[src*="redd.it"]');
+        if (videoElement) {
+          const videoSrc = videoElement.src || videoElement.getAttribute('src');
           if (videoSrc) {
-            content += `**Video:** [Watch Video](${videoSrc})\n\n`;
+            content += `\n## Reddit Video\n\n`;
+
+            // Try to embed the video directly
+            const videoContainer = videoElement.closest('video, shreddit-player');
+            if (videoContainer) {
+              // Create HTML5 video element
+              content += `<div style="margin: 20px 0;">\n`;
+              content += `  <video controls style="width: 100%; max-width: 600px; height: auto;">\n`;
+              content += `    <source src="${videoSrc}" type="video/mp4">\n`;
+              content += `    Your browser does not support the video tag.\n`;
+              content += `  </video>\n`;
+              content += `</div>\n\n`;
+            }
+
+            // Also add direct link as fallback
+            content += `[Download/Watch Video](${videoSrc})\n\n`;
           }
         }
       }
