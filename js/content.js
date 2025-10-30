@@ -361,6 +361,38 @@ const extractors = {
   'amazon.com.au': {
     name: 'Amazon Australia',
     extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.nl': {
+    name: 'Amazon Netherlands',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.se': {
+    name: 'Amazon Sweden',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.pl': {
+    name: 'Amazon Poland',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.tr': {
+    name: 'Amazon Turkey',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.ae': {
+    name: 'Amazon UAE',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.sa': {
+    name: 'Amazon Saudi Arabia',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.eg': {
+    name: 'Amazon Egypt',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.sg': {
+    name: 'Amazon Singapore',
+    extract: () => extractors['amazon.com'].extract()
   }
 };
 
