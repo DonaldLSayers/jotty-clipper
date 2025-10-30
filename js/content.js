@@ -365,25 +365,41 @@ const extractors = {
         }
       }
 
-      // Get images from the post
-      const images = document.querySelectorAll('shreddit-post img[src*="redd.it"], shreddit-post img[src*="imgur"], img[src*="preview.redd.it"]');
-      const seenImages = new Set();
-      images.forEach((img) => {
-        if (img.src && !img.src.includes('icon') && !img.src.includes('avatar') && !img.src.includes('emoji')) {
-          // Avoid duplicates
-          if (!seenImages.has(img.src)) {
-            seenImages.add(img.src);
-            content += `![Image](${img.src})\n\n`;
+      // Get images from the post - be very selective to avoid sidebar/recommended content
+      const postContainer = document.querySelector('shreddit-post, .thing, div[data-testid="post-container"]');
+      if (postContainer) {
+        const images = postContainer.querySelectorAll('img[src*="redd.it"], img[src*="imgur"], img[src*="preview.redd.it"], img[src*="i.redd.it"]');
+        const seenImages = new Set();
+        images.forEach((img) => {
+          if (img.src &&
+              !img.src.includes('icon') &&
+              !img.src.includes('avatar') &&
+              !img.src.includes('emoji') &&
+              !img.src.includes('thumbnail') &&
+              !img.closest('.thumbnail') &&
+              !img.closest('.side') &&
+              !img.closest('[data-testid="sidebar"]') &&
+              !img.closest('.recommendation') &&
+              !img.closest('.expando') ||
+              img.closest('[slot="text-body"], .usertext-body, [data-test-id="post-content"]')) {
+            // Only include images that are actually part of the post content
+            if (!seenImages.has(img.src)) {
+              seenImages.add(img.src);
+              content += `![Image](${img.src})\n\n`;
+            }
           }
-        }
-      });
+        });
+      }
 
-      // Get video if present
-      const video = document.querySelector('shreddit-player video source, video[src*="redd.it"]');
-      if (video) {
-        const videoSrc = video.src || video.getAttribute('src');
-        if (videoSrc) {
-          content += `**Video:** [Watch Video](${videoSrc})\n\n`;
+      // Get video if present - be selective to avoid sidebar content
+      const postContainerForVideo = document.querySelector('shreddit-post, .thing, div[data-testid="post-container"]');
+      if (postContainerForVideo) {
+        const video = postContainerForVideo.querySelector('shreddit-player video source, video[src*="redd.it"]');
+        if (video) {
+          const videoSrc = video.src || video.getAttribute('src');
+          if (videoSrc) {
+            content += `**Video:** [Watch Video](${videoSrc})\n\n`;
+          }
         }
       }
 
