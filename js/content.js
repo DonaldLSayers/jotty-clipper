@@ -130,6 +130,205 @@ const extractors = {
 
       return result;
     }
+  },
+
+  // Amazon extractor - Amazon has specific product data structure that needs special handling
+  'amazon.com': {
+    name: 'Amazon',
+    extract: () => {
+      const result = {
+        title: '',
+        content: '',
+        metadata: {}
+      };
+
+      // Get product title
+      const titleEl = document.querySelector('#productTitle, h1.product-title');
+      result.title = titleEl ? titleEl.textContent.trim() : document.title;
+
+      let content = `# ${result.title}\n\n`;
+
+      // Get price
+      const priceWhole = document.querySelector('.a-price-whole');
+      const priceFraction = document.querySelector('.a-price-fraction');
+      let price = '';
+      if (priceWhole) {
+        price = priceWhole.textContent.trim();
+        if (priceFraction) {
+          price += priceFraction.textContent.trim();
+        }
+        content += `**Price:** $${price}\n\n`;
+      }
+
+      // Get rating
+      const rating = document.querySelector('[data-hook="rating-out-of-text"], .a-icon-alt');
+      if (rating) {
+        content += `**Rating:** ${rating.textContent.trim()}\n\n`;
+      }
+
+      // Get product image
+      const mainImage = document.querySelector('#landingImage, #imgBlkFront');
+      if (mainImage && mainImage.src) {
+        content += `![Product Image](${mainImage.src})\n\n`;
+      }
+
+      // Get product features
+      const features = document.querySelector('#feature-bullets ul, #feature-bullets-btf ul');
+      if (features) {
+        content += `## Key Features\n\n`;
+        const featureItems = features.querySelectorAll('li span.a-list-item');
+        featureItems.forEach(item => {
+          const text = item.textContent.trim();
+          if (text && text.length > 0) {
+            content += `- ${text}\n`;
+          }
+        });
+        content += '\n';
+      }
+
+      // Get product description - try multiple selectors
+      let description = '';
+
+      // Method 1: Product description section
+      const descSection = document.querySelector('#productDescription');
+      if (descSection) {
+        const descParagraphs = descSection.querySelectorAll('p');
+        if (descParagraphs.length > 0) {
+          description = Array.from(descParagraphs)
+            .map(p => p.textContent.trim())
+            .filter(text => text.length > 0)
+            .join('\n\n');
+        } else {
+          description = descSection.textContent.trim();
+        }
+      }
+
+      // Method 2: Book description
+      if (!description) {
+        const bookDesc = document.querySelector('#bookDescription_feature_div noscript, #bookDescription_feature_div');
+        if (bookDesc) {
+          description = bookDesc.textContent.trim();
+        }
+      }
+
+      // Method 3: A+ content
+      if (!description) {
+        const aplus = document.querySelector('#aplus, #aplus_feature_div');
+        if (aplus) {
+          const aplusParagraphs = aplus.querySelectorAll('p, .aplus-p1, .aplus-p2, .aplus-p3');
+          if (aplusParagraphs.length > 0) {
+            description = Array.from(aplusParagraphs)
+              .map(p => p.textContent.trim())
+              .filter(text => text.length > 20)
+              .slice(0, 5)
+              .join('\n\n');
+          }
+        }
+      }
+
+      if (description && description.length > 0) {
+        content += `## Description\n\n${description}\n\n`;
+      }
+
+      // Extract product detail tables
+      let detailsContent = '';
+      const productTables = document.querySelectorAll('#productDetails_detailBullets_sections table, #productDetails table, .technical-details table');
+      if (productTables.length > 0) {
+        detailsContent = '\n## Product Details\n\n';
+        productTables.forEach((table, index) => {
+          detailsContent += convertTableToMarkdown(table);
+          if (index < productTables.length - 1) {
+            detailsContent += '\n';
+          }
+        });
+      }
+
+      // Fallback: extract from bullet/detail sections
+      const detailsTable = document.querySelector('#detailBullets_feature_div, #prodDetails');
+      if (detailsTable && !detailsContent) {
+        const details = {};
+        const rows = detailsTable.querySelectorAll('li, tr');
+        rows.forEach(row => {
+          const label = row.querySelector('.a-text-bold, th');
+          const value = row.querySelector('span:not(.a-text-bold), td');
+          if (label && value) {
+            details[label.textContent.trim().replace(':', '')] = value.textContent.trim();
+          }
+        });
+
+        if (Object.keys(details).length > 0) {
+          detailsContent = '\n## Product Details\n\n';
+          for (const [key, value] of Object.entries(details)) {
+            detailsContent += `**${key}:** ${value}\n`;
+          }
+        }
+      }
+
+      content += detailsContent;
+
+      // Get ASIN
+      const asinElement = document.querySelector('[data-asin]');
+      const asin = asinElement ? asinElement.getAttribute('data-asin') : null;
+
+      result.content = content;
+      result.metadata = {
+        price,
+        asin,
+        type: 'amazon-product'
+      };
+
+      return result;
+    }
+  },
+
+  // Amazon international sites
+  'amazon.co.uk': {
+    name: 'Amazon UK',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.ca': {
+    name: 'Amazon Canada',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.de': {
+    name: 'Amazon Germany',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.fr': {
+    name: 'Amazon France',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.es': {
+    name: 'Amazon Spain',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.it': {
+    name: 'Amazon Italy',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.co.jp': {
+    name: 'Amazon Japan',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.cn': {
+    name: 'Amazon China',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.in': {
+    name: 'Amazon India',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.com.mx': {
+    name: 'Amazon Mexico',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.com.br': {
+    name: 'Amazon Brazil',
+    extract: () => extractors['amazon.com'].extract()
+  },
+  'amazon.com.au': {
+    name: 'Amazon Australia',
+    extract: () => extractors['amazon.com'].extract()
   }
 };
 
@@ -377,8 +576,9 @@ function getSelectionContent() {
 
 // Find extractor for current site (for specialized sites)
 function findExtractor(hostname) {
+  // Check for exact domain matches first, then partial matches
   for (const domain in extractors) {
-    if (hostname.includes(domain)) {
+    if (hostname === domain || hostname.includes(domain)) {
       return extractors[domain];
     }
   }
