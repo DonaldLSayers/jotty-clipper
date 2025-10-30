@@ -38,6 +38,7 @@
         "js/global.js",
         "js/options.js",
         "js/popup.js",
+        "js/readability.js",
         "icons/lucide/lucide.min.js"
       ],
       "matches": [
