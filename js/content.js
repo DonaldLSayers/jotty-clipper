@@ -1,6 +1,31 @@
 // Content script for Jotty Clipper - runs on all pages
 // Uses Mozilla Readability.js for clean content extraction with fallbacks for specific sites
 
+// Amazon international domain mappings
+const AMAZON_DOMAINS = {
+  'amazon.com': 'Amazon',
+  'amazon.co.uk': 'Amazon UK',
+  'amazon.ca': 'Amazon Canada',
+  'amazon.de': 'Amazon Germany',
+  'amazon.fr': 'Amazon France',
+  'amazon.es': 'Amazon Spain',
+  'amazon.it': 'Amazon Italy',
+  'amazon.co.jp': 'Amazon Japan',
+  'amazon.cn': 'Amazon China',
+  'amazon.in': 'Amazon India',
+  'amazon.com.mx': 'Amazon Mexico',
+  'amazon.com.br': 'Amazon Brazil',
+  'amazon.com.au': 'Amazon Australia',
+  'amazon.nl': 'Amazon Netherlands',
+  'amazon.se': 'Amazon Sweden',
+  'amazon.pl': 'Amazon Poland',
+  'amazon.tr': 'Amazon Turkey',
+  'amazon.ae': 'Amazon UAE',
+  'amazon.sa': 'Amazon Saudi Arabia',
+  'amazon.eg': 'Amazon Egypt',
+  'amazon.sg': 'Amazon Singapore'
+};
+
 // Helper function to determine platform from URL
 const getPlatformFromUrl = (url) => {
   const urlLower = url.toLowerCase();
@@ -128,22 +153,14 @@ const extractors = {
       result.content += `**Channel:** ${channel}\n`;
       result.content += `**Video URL:** [Watch on YouTube](${window.location.href})\n\n`;
 
-      if (description && description.length > 0) {
-        result.content += `## Description\n\n${description}\n`;
-      } else {
-        result.content += `## Description\n\n*No description available*\n`;
-      }
-
-      // Get video thumbnail and links (GFM-compatible)
+      // Get video thumbnail and links (GFM-compatible) - add to top
       if (videoId) {
         const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
         const embedUrl = `https://www.youtube.com/embed/${videoId}`;
         const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
         const thumbnailHtmlUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
-        result.content += `\n## Video\n\n`;
-
-        // Add thumbnail with link to video (GFM-compatible)
+        result.content += `## Video Thumbnail\n\n`;
         result.content += `[![Video Thumbnail - Click to Watch](${thumbnailHtmlUrl})](${videoUrl})\n\n`;
 
         // Add direct links for different ways to watch
@@ -152,6 +169,15 @@ const extractors = {
         result.content += `- [📺 Direct Embed](${embedUrl})\n`;
         result.content += `- [🖼️ High Quality Thumbnail](${thumbnailUrl})\n\n`;
       }
+
+      if (description && description.length > 0) {
+        result.content += `## Description\n\n${description}\n`;
+      } else {
+        result.content += `## Description\n\n*No description available*\n`;
+      }
+
+      // Transcript functionality removed to avoid issues
+      // YouTube extraction focuses on title, description, and metadata
 
       result.metadata = {
         channel,
@@ -344,87 +370,14 @@ const extractors = {
     }
   },
 
-  // Amazon international sites
-  'amazon.co.uk': {
-    name: 'Amazon UK',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.ca': {
-    name: 'Amazon Canada',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.de': {
-    name: 'Amazon Germany',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.fr': {
-    name: 'Amazon France',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.es': {
-    name: 'Amazon Spain',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.it': {
-    name: 'Amazon Italy',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.co.jp': {
-    name: 'Amazon Japan',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.cn': {
-    name: 'Amazon China',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.in': {
-    name: 'Amazon India',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.com.mx': {
-    name: 'Amazon Mexico',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.com.br': {
-    name: 'Amazon Brazil',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.com.au': {
-    name: 'Amazon Australia',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.nl': {
-    name: 'Amazon Netherlands',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.se': {
-    name: 'Amazon Sweden',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.pl': {
-    name: 'Amazon Poland',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.tr': {
-    name: 'Amazon Turkey',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.ae': {
-    name: 'Amazon UAE',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.sa': {
-    name: 'Amazon Saudi Arabia',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.eg': {
-    name: 'Amazon Egypt',
-    extract: () => extractors['amazon.com'].extract()
-  },
-  'amazon.sg': {
-    name: 'Amazon Singapore',
-    extract: () => extractors['amazon.com'].extract()
-  },
+  // Amazon international sites - dynamically generated from AMAZON_DOMAINS
+  ...Object.keys(AMAZON_DOMAINS).filter(domain => domain !== 'amazon.com').reduce((acc, domain) => {
+    acc[domain] = {
+      name: AMAZON_DOMAINS[domain],
+      extract: () => extractors['amazon.com'].extract()
+    };
+    return acc;
+  }, {}),
 
   // Reddit extractor - Reddit has specific post structure that needs special handling
   'reddit.com': {
@@ -442,6 +395,83 @@ const extractors = {
 
       // Get post content
       let content = '';
+
+      // Get post thumbnail first - add to top
+      const postContainer = document.querySelector('shreddit-post, .thing, div[data-testid="post-container"]');
+      const redditPostUrl = window.location.href;
+      let postThumbnail = null;
+      let thumbnailLink = redditPostUrl;
+      let thumbnailText = 'Reddit Post Thumbnail';
+
+      // Try to get post thumbnail - look for actual post thumbnail image
+      if (postContainer) {
+        // Try multiple selectors for post thumbnail
+        const thumbnailSelectors = [
+          'img[alt="Post thumbnail"]',
+          'img[src*="thumbnail"]',
+          '.post-thumbnail img',
+          '.thumbnail img',
+          'img[src*="preview.redd.it"]',
+          'img[src*="i.redd.it"]'
+        ];
+
+        for (const selector of thumbnailSelectors) {
+          const thumbnail = postContainer.querySelector(selector);
+          if (thumbnail && thumbnail.src && !thumbnail.src.includes('javascript:')) {
+            postThumbnail = thumbnail.src;
+
+            // Try to find the link that the thumbnail points to
+            const thumbnailLinkEl = thumbnail.closest('a');
+            if (thumbnailLinkEl && thumbnailLinkEl.href) {
+              thumbnailLink = thumbnailLinkEl.href;
+            }
+            thumbnailText = thumbnail.alt || 'Reddit Post Thumbnail';
+            break;
+          }
+        }
+
+        // Process thumbnail if found
+        if (postThumbnail) {
+          // Check if thumbnail is a GIF or converted to static PNG
+          const isGif = postThumbnail.toLowerCase().includes('.gif') ||
+                        (postThumbnail.toLowerCase().includes('.png') &&
+                         (postThumbnail.toLowerCase().includes('format=png') ||
+                          postThumbnail.toLowerCase().includes('v0-')));
+
+          if (isGif) {
+            content += `## Post Thumbnail (Animated GIF)\n\n`;
+
+            // Try to find the original animated GIF URL if Reddit converted it to PNG
+            let animatedGifUrl = postThumbnail;
+
+            // If Reddit converted the GIF to PNG, try to construct the original MP4/GIF URL
+            if (postThumbnail.toLowerCase().includes('.png') && postThumbnail.includes('preview.redd.it')) {
+              // Extract the base filename without extension
+              const baseUrl = postThumbnail.replace(/\?.*$/, '').replace('.png', '');
+
+              // Try to construct the MP4 URL (Reddit usually stores animations as MP4)
+              const mp4Url = `${baseUrl}.gif?width=640&format=mp4&auto=webp&s=auto`;
+              const gifUrl = `${baseUrl}.gif?width=640&format=gif&auto=webp&s=auto`;
+
+              // For GitHub Flavored Markdown, MP4 videos need HTML embed
+              content += `<video controls autoplay muted loop style="max-width: 100%; height: auto;">\n`;
+              content += `  <source src="${mp4Url}" type="video/mp4">\n`;
+              content += `  <source src="${gifUrl}" type="image/gif">\n`;
+              content += `  <img src="${postThumbnail}" alt="${thumbnailText} - Static preview">\n`;
+              content += `  Your browser does not support the video tag.\n`;
+              content += `</video>\n\n`;
+            } else {
+              // Regular GIF from other sources
+              content += `![${thumbnailText} - Animated GIF](${postThumbnail})\n\n`;
+            }
+
+            content += `**🔗 [Direct Link to Post](${thumbnailLink})**\n\n`;
+          } else {
+            content += `## Post Thumbnail\n\n`;
+            content += `[![${thumbnailText} - Click to View](${postThumbnail})](${thumbnailLink})\n\n`;
+          }
+        }
+      }
 
       // Helper function to convert Reddit HTML to Markdown
       const convertRedditContent = (element) => {
@@ -542,31 +572,30 @@ const extractors = {
         }
       }
 
-      // Get images from the post - be very selective to avoid sidebar/recommended content
-      const postContainer = document.querySelector('shreddit-post, .thing, div[data-testid="post-container"]');
-      if (postContainer) {
-        const images = postContainer.querySelectorAll('img[src*="redd.it"], img[src*="imgur"], img[src*="preview.redd.it"], img[src*="i.redd.it"]');
-        const seenImages = new Set();
-        images.forEach((img) => {
-          if (img.src &&
-              !img.src.includes('icon') &&
-              !img.src.includes('avatar') &&
-              !img.src.includes('emoji') &&
-              !img.src.includes('thumbnail') &&
-              !img.closest('.thumbnail') &&
-              !img.closest('.side') &&
-              !img.closest('[data-testid="sidebar"]') &&
-              !img.closest('.recommendation') &&
-              !img.closest('.expando') ||
-              img.closest('[slot="text-body"], .usertext-body, [data-test-id="post-content"]')) {
-            // Only include images that are actually part of the post content
-            if (!seenImages.has(img.src)) {
-              seenImages.add(img.src);
-              content += `![Image](${img.src})\n\n`;
-            }
+      // Get post content images (exclude the thumbnail we already used)
+      const images = postContainer.querySelectorAll('img[src*="redd.it"], img[src*="imgur"], img[src*="preview.redd.it"], img[src*="i.redd.it"]');
+      const seenImages = new Set();
+      if (postThumbnail) seenImages.add(postThumbnail); // Don't duplicate thumbnail
+
+      images.forEach((img) => {
+        if (img.src &&
+            !img.src.includes('icon') &&
+            !img.src.includes('avatar') &&
+            !img.src.includes('emoji') &&
+            !img.src.includes('thumbnail') &&
+            !img.closest('.thumbnail') &&
+            !img.closest('.side') &&
+            !img.closest('[data-testid="sidebar"]') &&
+            !img.closest('.recommendation') &&
+            !img.closest('.expando') ||
+            img.closest('[slot="text-body"], .usertext-body, [data-test-id="post-content"]')) {
+          // Only include images that are actually part of the post content
+          if (!seenImages.has(img.src)) {
+            seenImages.add(img.src);
+            content += `![Image](${img.src})\n\n`;
           }
-        });
-      }
+        }
+      });
 
       
       // Smart detection of all links and embedded videos in the Reddit post
@@ -767,6 +796,10 @@ const extractors = {
         author: author ? author.textContent.trim().replace('u/', '') : null,
         subreddit: subreddit ? subreddit.textContent.trim().replace('r/', '') : null,
         timestamp: timestamp ? timestamp.getAttribute('datetime') : null,
+        postThumbnail: postThumbnail ? {
+          url: postThumbnail,
+          alt: 'Reddit Post Thumbnail'
+        } : null,
         detectedLinks: detectedLinks.length > 0 ? detectedLinks.map(link => ({
           url: link.url,
           text: link.text,
@@ -777,6 +810,15 @@ const extractors = {
       };
 
       result.content = content.trim() || 'Could not extract post content';
+
+      // Debug logging
+      if (detectedLinks.length > 0) {
+        console.log('Reddit post detected links:', detectedLinks.map(l => l.url));
+      }
+      if (postThumbnail) {
+        console.log('Reddit post thumbnail found:', postThumbnail);
+      }
+
       return result;
     }
   }
