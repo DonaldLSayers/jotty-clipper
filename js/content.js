@@ -576,12 +576,17 @@ function getSelectionContent() {
 
 // Find extractor for current site (for specialized sites)
 function findExtractor(hostname) {
+  // Debug: log the hostname to help with debugging
+  console.log('Finding extractor for hostname:', hostname);
+
   // Check for exact domain matches first, then partial matches
   for (const domain in extractors) {
     if (hostname === domain || hostname.includes(domain)) {
+      console.log('Found extractor:', domain, '->', extractors[domain].name);
       return extractors[domain];
     }
   }
+  console.log('No specific extractor found, using Readability');
   return null;
 }
 
@@ -616,6 +621,7 @@ browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
   if (request.action === 'extractContent') {
     const hostname = new URL(window.location.href).hostname;
+    console.log('Extract content requested for:', hostname, 'clipType:', request.clipType);
     const extractor = findExtractor(hostname);
 
     (async () => {
@@ -623,11 +629,14 @@ browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         let result;
 
         if (request.clipType === 'selection') {
+          console.log('Using selection extraction');
           result = getSelectionContent();
-        } else if (extractor && request.clipType === 'auto') {
-          // Use specialized extractor for auto mode
+        } else if (extractor && (request.clipType === 'auto' || request.clipType === 'full')) {
+          console.log('Using specialized extractor:', extractor.name);
+          // Use specialized extractor for auto and full mode on Amazon/YouTube
           result = await extractor.extract();
         } else {
+          console.log('Using Readability extraction');
           // Use Readability for all other cases
           result = extractWithReadability();
           if (request.clipType === 'full' && result.metadata.type === 'readability-article') {
@@ -637,6 +646,7 @@ browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
           }
         }
 
+        console.log('Extraction result type:', result.metadata.type);
         sendResponse({
           success: true,
           content: result.content,
