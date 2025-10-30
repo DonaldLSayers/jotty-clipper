@@ -142,8 +142,30 @@ const extractors = {
 
       return result;
     }
-  },
+  }
+};
 
+// Helper function to determine platform from URL
+const getPlatformFromUrl = (url) => {
+  const urlLower = url.toLowerCase();
+  if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) return 'YouTube';
+  if (urlLower.includes('twitch.tv')) return 'Twitch';
+  if (urlLower.includes('twitter.com') || urlLower.includes('x.com')) return 'X/Twitter';
+  if (urlLower.includes('instagram.com')) return 'Instagram';
+  if (urlLower.includes('tiktok.com')) return 'TikTok';
+  if (urlLower.includes('github.com')) return 'GitHub';
+  if (urlLower.includes('stackoverflow.com')) return 'Stack Overflow';
+  if (urlLower.includes('medium.com')) return 'Medium';
+  if (urlLower.includes('wikipedia.org')) return 'Wikipedia';
+  try {
+    return new URL(url).hostname;
+  } catch (e) {
+    return 'External Website';
+  }
+};
+
+// Site-specific extractors - only for sites that need special handling
+const extractors = {
   // Amazon extractor - Amazon has specific product data structure that needs special handling
   'amazon.com': {
     name: 'Amazon',
@@ -503,10 +525,87 @@ const extractors = {
         }
       }
 
-      // Check for link posts
-      const linkPost = document.querySelector('a[slot="full-post-link"], shreddit-post a[data-click-id="timestamp"]');
-      if (linkPost && linkPost.href && !linkPost.href.includes('reddit.com')) {
-        content += `**Link:** [${linkPost.href}](${linkPost.href})\n\n`;
+      // Check for link posts and external links
+      let externalLink = null;
+      const linkSelectors = [
+        'a[slot="full-post-link"]',
+        'shreddit-post a[data-click-id="timestamp"]',
+        'a[data-event-action="thumbnail"]',
+        '.outboundLink',
+        'a[data-outbound-url]',
+        '.title a[href*="youtu.be"]',
+        '.title a[href*="youtube.com"]',
+        '.title a[href*="twitch.tv"]',
+        '.title a[href*="twitter.com"]',
+        '.title a[href*="x.com"]'
+      ];
+
+      for (const selector of linkSelectors) {
+        const linkElement = document.querySelector(selector);
+        if (linkElement && linkElement.href && !linkElement.href.includes('reddit.com')) {
+          externalLink = {
+            url: linkElement.href,
+            text: linkElement.textContent.trim() || linkElement.title || 'External Link'
+          };
+          break;
+        }
+      }
+
+      // Enhanced link post handling
+      if (externalLink) {
+        content += `\n## External Link\n\n`;
+        content += `**🔗 [${externalLink.text}](${externalLink.url})**\n\n`;
+
+        // Add platform-specific handling
+        const url = externalLink.url.toLowerCase();
+
+        // YouTube links
+        if (url.includes('youtube.com') || url.includes('youtu.be')) {
+          let videoId = '';
+          if (url.includes('youtu.be/')) {
+            videoId = url.split('youtu.be/')[1]?.split('?')[0];
+          } else if (url.includes('youtube.com/watch?v=')) {
+            videoId = url.split('v=')[1]?.split('&')[0];
+          }
+
+          if (videoId) {
+            const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+            content += `[![YouTube Video Thumbnail](${thumbnailUrl})](${externalLink.url})\n\n`;
+            content += `**📺 Platform:** YouTube\n`;
+          }
+        }
+
+        // Twitch links
+        else if (url.includes('twitch.tv')) {
+          content += `**📺 Platform:** Twitch\n`;
+          if (url.includes('/video/')) {
+            const videoId = url.split('/video/')[1]?.split('?')[0];
+            if (videoId) {
+              content += `**🎥 Video ID:** ${videoId}\n`;
+            }
+          }
+        }
+
+        // Twitter/X links
+        else if (url.includes('twitter.com') || url.includes('x.com')) {
+          const username = url.split('/').pop()?.split('?')[0];
+          content += `**🐦 Platform:** X (Twitter)\n`;
+          if (username && username.length > 0) {
+            content += `**👤 User:** @${username}\n`;
+          }
+        }
+
+        // General website links
+        else {
+          try {
+            const hostname = new URL(externalLink.url).hostname;
+            content += `**🌐 Website:** ${hostname}\n`;
+          } catch (e) {
+            content += `**🌐 Type:** External Website\n`;
+          }
+        }
+
+        content += `**⏰ Link posted:** ${new Date().toLocaleString()}\n\n`;
       }
 
       // Get metadata
@@ -518,6 +617,11 @@ const extractors = {
         author: author ? author.textContent.trim().replace('u/', '') : null,
         subreddit: subreddit ? subreddit.textContent.trim().replace('r/', '') : null,
         timestamp: timestamp ? timestamp.getAttribute('datetime') : null,
+        externalLink: externalLink ? {
+          url: externalLink.url,
+          text: externalLink.text,
+          platform: getPlatformFromUrl(externalLink.url)
+        } : null,
         type: 'reddit-post'
       };
 
