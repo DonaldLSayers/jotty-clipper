@@ -313,6 +313,103 @@ const extractors = {
     }
   },
 
+  // Reddit extractor - Reddit has specific post structure that needs special handling
+  'reddit.com': {
+    name: 'Reddit',
+    extract: () => {
+      const result = {
+        title: '',
+        content: '',
+        metadata: {}
+      };
+
+      // Get post title - modern Reddit (shreddit) layout
+      const titleEl = document.querySelector('shreddit-post h1, h1[slot="title"], h1');
+      result.title = titleEl ? titleEl.textContent.trim() : document.title;
+
+      // Get post content
+      let content = '';
+
+      // Modern Reddit (shreddit) - the post content is in different places depending on post type
+      // Try text post content
+      const textPost = document.querySelector('div[slot="text-body"], shreddit-post div[slot="text-body"]');
+      if (textPost) {
+        content += `## Post Content\n\n${textPost.textContent.trim()}\n\n`;
+      }
+
+      // Try to get post content from the main post container
+      if (!content) {
+        const postContent = document.querySelector('[data-test-id="post-content"] p, shreddit-post p');
+        if (postContent) {
+          // Get all paragraphs in the post
+          const allParas = document.querySelectorAll('[data-test-id="post-content"] p, shreddit-post div[slot="text-body"] p');
+          if (allParas.length > 0) {
+            content += `## Post Content\n\n`;
+            allParas.forEach(p => {
+              const text = p.textContent.trim();
+              if (text && text.length > 0) {
+                content += `${text}\n\n`;
+              }
+            });
+          } else {
+            content += `## Post Content\n\n${postContent.textContent.trim()}\n\n`;
+          }
+        }
+      }
+
+      // Fallback: try old Reddit layout
+      if (!content) {
+        const oldRedditContent = document.querySelector('.usertext-body .md');
+        if (oldRedditContent) {
+          content += `## Post Content\n\n${oldRedditContent.textContent.trim()}\n\n`;
+        }
+      }
+
+      // Get images from the post
+      const images = document.querySelectorAll('shreddit-post img[src*="redd.it"], shreddit-post img[src*="imgur"], img[src*="preview.redd.it"]');
+      const seenImages = new Set();
+      images.forEach((img) => {
+        if (img.src && !img.src.includes('icon') && !img.src.includes('avatar') && !img.src.includes('emoji')) {
+          // Avoid duplicates
+          if (!seenImages.has(img.src)) {
+            seenImages.add(img.src);
+            content += `![Image](${img.src})\n\n`;
+          }
+        }
+      });
+
+      // Get video if present
+      const video = document.querySelector('shreddit-player video source, video[src*="redd.it"]');
+      if (video) {
+        const videoSrc = video.src || video.getAttribute('src');
+        if (videoSrc) {
+          content += `**Video:** [Watch Video](${videoSrc})\n\n`;
+        }
+      }
+
+      // Check for link posts
+      const linkPost = document.querySelector('a[slot="full-post-link"], shreddit-post a[data-click-id="timestamp"]');
+      if (linkPost && linkPost.href && !linkPost.href.includes('reddit.com')) {
+        content += `**Link:** [${linkPost.href}](${linkPost.href})\n\n`;
+      }
+
+      // Get metadata
+      const author = document.querySelector('shreddit-post [slot="authorName"] a, a[author]');
+      const subreddit = document.querySelector('shreddit-post [slot="subreddit"] a, a[slot="subreddit-name"]');
+      const timestamp = document.querySelector('shreddit-post time, time');
+
+      result.metadata = {
+        author: author ? author.textContent.trim().replace('u/', '') : null,
+        subreddit: subreddit ? subreddit.textContent.trim().replace('r/', '') : null,
+        timestamp: timestamp ? timestamp.getAttribute('datetime') : null,
+        type: 'reddit-post'
+      };
+
+      result.content = content.trim() || 'Could not extract post content';
+      return result;
+    }
+  },
+
   // Amazon international sites
   'amazon.co.uk': {
     name: 'Amazon UK',
