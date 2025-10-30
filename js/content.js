@@ -115,24 +115,23 @@ const extractors = {
         result.content += `## Description\n\n*No description available*\n`;
       }
 
-      // Get embedded video
+      // Get video thumbnail and links (GFM-compatible)
       if (videoId) {
         const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
         const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        const thumbnailHtmlUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
-        // Add embedded video player (HTML for proper rendering)
         result.content += `\n## Video\n\n`;
-        result.content += `<div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; margin: 20px 0;">\n`;
-        result.content += `  <iframe src="${embedUrl}" \n`;
-        result.content += `          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" \n`;
-        result.content += `          frameborder="0" \n`;
-        result.content += `          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" \n`;
-        result.content += `          allowfullscreen>\n`;
-        result.content += `  </iframe>\n`;
-        result.content += `</div>\n\n`;
 
-        // Also add direct link as fallback
-        result.content += `[Watch on YouTube](${videoUrl})\n\n`;
+        // Add thumbnail with link to video (GFM-compatible)
+        result.content += `[![Video Thumbnail - Click to Watch](${thumbnailHtmlUrl})](${videoUrl})\n\n`;
+
+        // Add direct links for different ways to watch
+        result.content += `**🔗 Links:**\n`;
+        result.content += `- [▶️ Watch on YouTube](${videoUrl})\n`;
+        result.content += `- [📺 Direct Embed](${embedUrl})\n`;
+        result.content += `- [🖼️ High Quality Thumbnail](${thumbnailUrl})\n\n`;
       }
 
       result.metadata = {
@@ -488,20 +487,18 @@ const extractors = {
           if (videoSrc) {
             content += `\n## Reddit Video\n\n`;
 
-            // Try to embed the video directly
-            const videoContainer = videoElement.closest('video, shreddit-player');
-            if (videoContainer) {
-              // Create HTML5 video element
-              content += `<div style="margin: 20px 0;">\n`;
-              content += `  <video controls style="width: 100%; max-width: 600px; height: auto;">\n`;
-              content += `    <source src="${videoSrc}" type="video/mp4">\n`;
-              content += `    Your browser does not support the video tag.\n`;
-              content += `  </video>\n`;
-              content += `</div>\n\n`;
-            }
+            // Add a video placeholder with link (GFM-compatible)
+            content += `🎥 **[Reddit Video - Click to Watch](${videoSrc})**\n\n`;
 
-            // Also add direct link as fallback
-            content += `[Download/Watch Video](${videoSrc})\n\n`;
+            // Add direct download/watch links
+            content += `**🔗 Links:**\n`;
+            content += `- [▶️ Play Video](${videoSrc})\n`;
+
+            // Try to get audio-only version if available
+            const audioSrc = videoSrc.replace(/\.mp4/, '_audio.mp4');
+            content += `- [🎵 Audio Only](${audioSrc})\n`;
+
+            content += `- [⬇️ Download Video](${videoSrc}?source=fallback)\n\n`;
           }
         }
       }
