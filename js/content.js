@@ -330,29 +330,76 @@ const extractors = {
       // Get post content
       let content = '';
 
+      // Helper function to convert Reddit HTML to Markdown
+      const convertRedditContent = (element) => {
+        if (!element) return '';
+
+        const clone = element.cloneNode(true);
+
+        // Convert Reddit-specific formatting to Markdown
+        clone.querySelectorAll('strong, b').forEach(el => {
+          el.innerHTML = `**${el.textContent}**`;
+        });
+
+        clone.querySelectorAll('em, i').forEach(el => {
+          el.innerHTML = `*${el.textContent}*`;
+        });
+
+        clone.querySelectorAll('a').forEach(el => {
+          const href = el.href;
+          const text = el.textContent;
+          if (href && text && !href.includes('javascript:')) {
+            el.innerHTML = `[${text}](${href})`;
+          }
+        });
+
+        clone.querySelectorAll('code').forEach(el => {
+          el.innerHTML = `\`${el.textContent}\``;
+        });
+
+        clone.querySelectorAll('pre code').forEach(el => {
+          el.parentElement.innerHTML = `\`\`\`\n${el.textContent}\n\`\`\``;
+        });
+
+        // Convert line breaks
+        clone.querySelectorAll('br').forEach(el => {
+          el.outerHTML = '\n';
+        });
+
+        clone.querySelectorAll('p').forEach(el => {
+          el.innerHTML = `${el.innerHTML}\n\n`;
+        });
+
+        clone.querySelectorAll('ul, ol').forEach(list => {
+          const items = list.querySelectorAll('li');
+          const isOrdered = list.tagName === 'OL';
+          items.forEach((item, idx) => {
+            const prefix = isOrdered ? `${idx + 1}. ` : '- ';
+            item.innerHTML = `${prefix}${item.innerHTML}\n`;
+          });
+          list.innerHTML = '\n' + list.innerHTML + '\n';
+        });
+
+        return clone.textContent || clone.innerText || '';
+      };
+
       // Modern Reddit (shreddit) - the post content is in different places depending on post type
       // Try text post content
       const textPost = document.querySelector('div[slot="text-body"], shreddit-post div[slot="text-body"]');
       if (textPost) {
-        content += `## Post Content\n\n${textPost.textContent.trim()}\n\n`;
+        const formattedContent = convertRedditContent(textPost).trim();
+        if (formattedContent) {
+          content += `## Post Content\n\n${formattedContent}\n\n`;
+        }
       }
 
       // Try to get post content from the main post container
       if (!content) {
-        const postContent = document.querySelector('[data-test-id="post-content"] p, shreddit-post p');
+        const postContent = document.querySelector('[data-test-id="post-content"], shreddit-post [data-test-id="post-content"]');
         if (postContent) {
-          // Get all paragraphs in the post
-          const allParas = document.querySelectorAll('[data-test-id="post-content"] p, shreddit-post div[slot="text-body"] p');
-          if (allParas.length > 0) {
-            content += `## Post Content\n\n`;
-            allParas.forEach(p => {
-              const text = p.textContent.trim();
-              if (text && text.length > 0) {
-                content += `${text}\n\n`;
-              }
-            });
-          } else {
-            content += `## Post Content\n\n${postContent.textContent.trim()}\n\n`;
+          const formattedContent = convertRedditContent(postContent).trim();
+          if (formattedContent) {
+            content += `## Post Content\n\n${formattedContent}\n\n`;
           }
         }
       }
@@ -361,7 +408,10 @@ const extractors = {
       if (!content) {
         const oldRedditContent = document.querySelector('.usertext-body .md');
         if (oldRedditContent) {
-          content += `## Post Content\n\n${oldRedditContent.textContent.trim()}\n\n`;
+          const formattedContent = convertRedditContent(oldRedditContent).trim();
+          if (formattedContent) {
+            content += `## Post Content\n\n${formattedContent}\n\n`;
+          }
         }
       }
 
