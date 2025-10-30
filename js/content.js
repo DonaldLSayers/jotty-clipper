@@ -568,112 +568,194 @@ const extractors = {
         });
       }
 
-      // Get video if present - be selective to avoid sidebar content
-      const postContainerForVideo = document.querySelector('shreddit-post, .thing, div[data-testid="post-container"]');
-      if (postContainerForVideo) {
-        const videoElement = postContainerForVideo.querySelector('shreddit-player video source, video[src*="redd.it"]');
-        if (videoElement) {
-          const videoSrc = videoElement.src || videoElement.getAttribute('src');
-          if (videoSrc) {
-            content += `\n## Reddit Video\n\n`;
+      
+      // Smart detection of all links and embedded videos in the Reddit post
+      const detectLinksAndVideos = () => {
+        const postContainer = document.querySelector('shreddit-post, .thing, div[data-testid="post-container"]');
+        if (!postContainer) return [];
 
-            // Add a video placeholder with link (GFM-compatible)
-            content += `🎥 **[Reddit Video - Click to Watch](${videoSrc})**\n\n`;
+        const links = [];
+        const seenUrls = new Set();
 
-            // Add direct download/watch links
-            content += `**🔗 Links:**\n`;
-            content += `- [▶️ Play Video](${videoSrc})\n`;
+        // Find all links in the post
+        const allLinks = postContainer.querySelectorAll('a[href]');
+        allLinks.forEach(linkElement => {
+          const url = linkElement.href;
+          const text = linkElement.textContent.trim() || linkElement.title || 'Link';
 
-            // Try to get audio-only version if available
-            const audioSrc = videoSrc.replace(/\.mp4/, '_audio.mp4');
-            content += `- [🎵 Audio Only](${audioSrc})\n`;
-
-            content += `- [⬇️ Download Video](${videoSrc}?source=fallback)\n\n`;
+          // Skip Reddit internal links and duplicates
+          if (url && !url.includes('reddit.com') && !seenUrls.has(url) && url !== window.location.href) {
+            seenUrls.add(url);
+            links.push({
+              url: url,
+              text: text,
+              element: linkElement
+            });
           }
-        }
-      }
+        });
 
-      // Check for link posts and external links
-      let externalLink = null;
-      const linkSelectors = [
-        'a[slot="full-post-link"]',
-        'shreddit-post a[data-click-id="timestamp"]',
-        'a[data-event-action="thumbnail"]',
-        '.outboundLink',
-        'a[data-outbound-url]',
-        '.title a[href*="youtu.be"]',
-        '.title a[href*="youtube.com"]',
-        '.title a[href*="twitch.tv"]',
-        '.title a[href*="twitter.com"]',
-        '.title a[href*="x.com"]'
-      ];
-
-      for (const selector of linkSelectors) {
-        const linkElement = document.querySelector(selector);
-        if (linkElement && linkElement.href && !linkElement.href.includes('reddit.com')) {
-          externalLink = {
-            url: linkElement.href,
-            text: linkElement.textContent.trim() || linkElement.title || 'External Link'
-          };
-          break;
-        }
-      }
-
-      // Enhanced link post handling
-      if (externalLink) {
-        content += `\n## External Link\n\n`;
-        content += `**🔗 [${externalLink.text}](${externalLink.url})**\n\n`;
-
-        // Add platform-specific handling
-        const url = externalLink.url.toLowerCase();
-
-        // YouTube links
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-          let videoId = '';
-          if (url.includes('youtu.be/')) {
-            videoId = url.split('youtu.be/')[1]?.split('?')[0];
-          } else if (url.includes('youtube.com/watch?v=')) {
-            videoId = url.split('v=')[1]?.split('&')[0];
+        // Look for embedded videos in Reddit's video players
+        const videoElements = postContainer.querySelectorAll('video source, shreddit-player video source, .media-element-embedded-video source');
+        videoElements.forEach(videoSource => {
+          const videoUrl = videoSource.src || videoSource.getAttribute('src');
+          if (videoUrl && !seenUrls.has(videoUrl)) {
+            seenUrls.add(videoUrl);
+            links.push({
+              url: videoUrl,
+              text: 'Embedded Video',
+              element: videoSource,
+              isVideo: true
+            });
           }
+        });
 
-          if (videoId) {
-            const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-            content += `[![YouTube Video Thumbnail](${thumbnailUrl})](${externalLink.url})\n\n`;
-            content += `**📺 Platform:** YouTube\n`;
+        // Look for video embed containers (Twitch, YouTube, etc.)
+        const videoContainers = postContainer.querySelectorAll('iframe[src*="youtube"], iframe[src*="twitch"], .reddit-embed, .video-player');
+        videoContainers.forEach(container => {
+          const src = container.src || container.getAttribute('src');
+          if (src && !seenUrls.has(src)) {
+            seenUrls.add(src);
+            links.push({
+              url: src,
+              text: 'Embedded Content',
+              element: container,
+              isEmbed: true
+            });
           }
-        }
+        });
 
-        // Twitch links
-        else if (url.includes('twitch.tv')) {
-          content += `**📺 Platform:** Twitch\n`;
-          if (url.includes('/video/')) {
-            const videoId = url.split('/video/')[1]?.split('?')[0];
+        // Look for data attributes that might contain video URLs
+        const dataElements = postContainer.querySelectorAll('[data-video-url], [data-source], [data-href-url]');
+        dataElements.forEach(element => {
+          const url = element.getAttribute('data-video-url') ||
+                     element.getAttribute('data-source') ||
+                     element.getAttribute('data-href-url');
+          if (url && !seenUrls.has(url)) {
+            seenUrls.add(url);
+            links.push({
+              url: url,
+              text: 'Media Link',
+              element: element,
+              isDataLink: true
+            });
+          }
+        });
+
+        return links;
+      };
+
+      // Get all detected links and videos
+      const detectedLinks = detectLinksAndVideos();
+
+      // Enhanced link post handling with all detected links and videos
+      if (detectedLinks.length > 0) {
+        content += `\n## Links & Media\n\n`;
+
+        detectedLinks.forEach((link, index) => {
+          const url = link.url.toLowerCase();
+          const linkType = link.isVideo ? '🎥' : link.isEmbed ? '📺' : link.isDataLink ? '🎬' : '🔗';
+
+          content += `${linkType} **[${link.text}](${link.url})**\n\n`;
+
+          // Add platform-specific handling and thumbnails
+          if (url.includes('youtube.com') || url.includes('youtu.be')) {
+            let videoId = '';
+            if (url.includes('youtu.be/')) {
+              videoId = url.split('youtu.be/')[1]?.split('?')[0];
+            } else if (url.includes('youtube.com/watch?v=')) {
+              videoId = url.split('v=')[1]?.split('&')[0];
+            } else if (url.includes('youtube.com/embed/')) {
+              videoId = url.split('youtube.com/embed/')[1]?.split('?')[0];
+            }
+
             if (videoId) {
-              content += `**🎥 Video ID:** ${videoId}\n`;
+              const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+              content += `[![YouTube Video Thumbnail](${thumbnailUrl})](${link.url})\n\n`;
+              content += `**📺 Platform:** YouTube\n`;
+              content += `**🎬 Video ID:** ${videoId}\n`;
             }
           }
-        }
 
-        // Twitter/X links
-        else if (url.includes('twitter.com') || url.includes('x.com')) {
-          const username = url.split('/').pop()?.split('?')[0];
-          content += `**🐦 Platform:** X (Twitter)\n`;
-          if (username && username.length > 0) {
-            content += `**👤 User:** @${username}\n`;
+          // Twitch links
+          else if (url.includes('twitch.tv')) {
+            content += `**📺 Platform:** Twitch\n`;
+            if (url.includes('/video/')) {
+              const videoId = url.split('/video/')[1]?.split('?')[0];
+              if (videoId) {
+                content += `**🎥 Video ID:** ${videoId}\n`;
+              }
+            } else {
+              const username = url.split('/')?.[1]?.split('?')[0];
+              if (username) {
+                content += `**👤 Channel:** ${username}\n`;
+              }
+            }
           }
-        }
 
-        // General website links
-        else {
-          try {
-            const hostname = new URL(externalLink.url).hostname;
-            content += `**🌐 Website:** ${hostname}\n`;
-          } catch (e) {
-            content += `**🌐 Type:** External Website\n`;
+          // Twitter/X links
+          else if (url.includes('twitter.com') || url.includes('x.com')) {
+            const username = url.split('/').pop()?.split('?')[0];
+            content += `**🐦 Platform:** X (Twitter)\n`;
+            if (username && username.length > 0 && !username.includes('status')) {
+              content += `**👤 User:** @${username}\n`;
+            } else if (url.includes('/status/')) {
+              content += `**📝 Tweet Post\n**`;
+            }
           }
-        }
 
-        content += `**⏰ Link posted:** ${new Date().toLocaleString()}\n\n`;
+          // Instagram links
+          else if (url.includes('instagram.com')) {
+            content += `**📷 Platform:** Instagram\n`;
+            if (url.includes('/p/')) {
+              content += `**📸 Instagram Post\n**`;
+            } else if (url.includes('/reel/')) {
+              content += `**🎬 Instagram Reel\n**`;
+            }
+          }
+
+          // TikTok links
+          else if (url.includes('tiktok.com')) {
+            content += `**🎵 Platform:** TikTok\n`;
+            if (url.includes('/video/')) {
+              content += `**🎵 TikTok Video\n**`;
+            }
+          }
+
+          // Reddit video links (v.redd.it)
+          else if (url.includes('v.redd.it') || url.includes('redd.it')) {
+            content += `**🎥 Platform:** Reddit Video\n`;
+            content += `**⬇️ Direct Video Link\n**`;
+          }
+
+          // GitHub links
+          else if (url.includes('github.com')) {
+            content += `**💻 Platform:** GitHub\n`;
+            if (url.includes('/issues/')) {
+              content += `**🐛 GitHub Issue\n**`;
+            } else if (url.includes('/pull/')) {
+              content += `**🔄 Pull Request\n**`;
+            } else if (url.includes('/blob/')) {
+              content += `**📄 File/Code\n**`;
+            }
+          }
+
+          // General website links
+          else {
+            try {
+              const hostname = new URL(link.url).hostname;
+              content += `**🌐 Website:** ${hostname}\n`;
+            } catch (e) {
+              content += `**🌐 Type:** External Link\n`;
+            }
+          }
+
+          content += `**⏰ Extracted:** ${new Date().toLocaleString()}\n\n`;
+
+          // Add separator between multiple links (except last one)
+          if (index < detectedLinks.length - 1) {
+            content += `---\n\n`;
+          }
+        });
       }
 
       // Get metadata
@@ -685,11 +767,12 @@ const extractors = {
         author: author ? author.textContent.trim().replace('u/', '') : null,
         subreddit: subreddit ? subreddit.textContent.trim().replace('r/', '') : null,
         timestamp: timestamp ? timestamp.getAttribute('datetime') : null,
-        externalLink: externalLink ? {
-          url: externalLink.url,
-          text: externalLink.text,
-          platform: getPlatformFromUrl(externalLink.url)
-        } : null,
+        detectedLinks: detectedLinks.length > 0 ? detectedLinks.map(link => ({
+          url: link.url,
+          text: link.text,
+          platform: getPlatformFromUrl(link.url),
+          type: link.isVideo ? 'video' : link.isEmbed ? 'embed' : link.isDataLink ? 'data' : 'link'
+        })) : null,
         type: 'reddit-post'
       };
 
