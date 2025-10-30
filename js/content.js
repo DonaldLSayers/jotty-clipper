@@ -589,8 +589,23 @@ const extractors = {
       }
 
       // Get ASIN and other details
+      let details = {};
+
+      // First, try to extract actual tables
+      const productTables = document.querySelectorAll('#productDetails_detailBullets_sections table, #productDetails table, .technical-details table');
+      if (productTables.length > 0) {
+        let tableContent = '\n## Product Details\n\n';
+        productTables.forEach((table, index) => {
+          tableContent += convertTableToMarkdown(table);
+          if (index < productTables.length - 1) {
+            tableContent += '\n';
+          }
+        });
+        content += tableContent;
+      }
+
+      // Fallback: extract from bullet/detail sections
       const detailsTable = document.querySelector('#detailBullets_feature_div, #prodDetails');
-      const details = {};
       if (detailsTable) {
         const rows = detailsTable.querySelectorAll('li, tr');
         rows.forEach(row => {
@@ -750,10 +765,64 @@ function extractTextWithWhitespace(element) {
   return text;
 }
 
+// Convert HTML table to Markdown table format
+function convertTableToMarkdown(table) {
+  const rows = Array.from(table.querySelectorAll('tr'));
+  if (rows.length === 0) return '';
+
+  let markdown = '\n';
+  let hasHeaders = false;
+  let headerAdded = false;
+
+  // Check if table has headers and process each row
+  rows.forEach((row, rowIndex) => {
+    const cells = Array.from(row.querySelectorAll('th, td'));
+    const cellTexts = cells.map(cell => {
+      // Clean and escape pipe characters in cell content
+      let text = cell.textContent.trim();
+      // Escape pipe characters that would break markdown table format
+      text = text.replace(/\|/g, '\\|');
+      // Handle multi-line content by replacing with spaces
+      text = text.replace(/\s+/g, ' ');
+      return text;
+    });
+
+    // Check if this row contains headers
+    if (row.querySelector('th')) {
+      hasHeaders = true;
+    }
+
+    // Create the markdown row
+    markdown += '| ' + cellTexts.join(' | ') + ' |\n';
+
+    // Add separator row after first row if it has headers, or after first row if no headers found
+    if (!headerAdded && (rowIndex === 0 && hasHeaders || (rowIndex === 0 && !hasHeaders))) {
+      // Create separator row with minimum 3 dashes for markdown compatibility
+      const separators = cellTexts.map(text => '-'.repeat(Math.max(text.length, 3)));
+      markdown += '| ' + separators.join(' | ') + ' |\n';
+      headerAdded = true;
+    } else if (!headerAdded && rowIndex === 1 && hasHeaders) {
+      // Add separator after header row if headers weren't in first row
+      const separators = cellTexts.map(text => '-'.repeat(Math.max(text.length, 3)));
+      markdown += '| ' + separators.join(' | ') + ' |\n';
+      headerAdded = true;
+    }
+  });
+
+  // Add some spacing around the table
+  return markdown + '\n';
+}
+
 // Convert HTML to Markdown-like format with better whitespace preservation
 function convertToMarkdown(element) {
   let markdown = '';
   const clone = element.cloneNode(true);
+
+  // Process tables first - before other processing
+  clone.querySelectorAll('table').forEach(table => {
+    const tableMarkdown = convertTableToMarkdown(table);
+    table.outerHTML = tableMarkdown;
+  });
 
   // Process headings
   clone.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => {
