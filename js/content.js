@@ -348,7 +348,7 @@ const extractors = {
         clone.querySelectorAll('a').forEach(el => {
           const href = el.href;
           const text = el.textContent;
-          if (href && text && !href.includes('javascript:')) {
+          if (href && text && !href.includes('javascript:') && !href.includes('#')) {
             el.innerHTML = `[${text}](${href})`;
           }
         });
@@ -361,26 +361,44 @@ const extractors = {
           el.parentElement.innerHTML = `\`\`\`\n${el.textContent}\n\`\`\``;
         });
 
+        // Convert blockquotes
+        clone.querySelectorAll('blockquote').forEach(el => {
+          el.innerHTML = `> ${el.textContent.trim()}`;
+        });
+
         // Convert line breaks
         clone.querySelectorAll('br').forEach(el => {
           el.outerHTML = '\n';
         });
 
+        // Process paragraphs
         clone.querySelectorAll('p').forEach(el => {
           el.innerHTML = `${el.innerHTML}\n\n`;
         });
 
+        // Process lists
         clone.querySelectorAll('ul, ol').forEach(list => {
           const items = list.querySelectorAll('li');
           const isOrdered = list.tagName === 'OL';
+          let listContent = '\n';
           items.forEach((item, idx) => {
             const prefix = isOrdered ? `${idx + 1}. ` : '- ';
-            item.innerHTML = `${prefix}${item.innerHTML}\n`;
+            listContent += `${prefix}${item.textContent.trim()}\n`;
           });
-          list.innerHTML = '\n' + list.innerHTML + '\n';
+          list.outerHTML = listContent + '\n';
         });
 
-        return clone.textContent || clone.innerText || '';
+        // Get the text content and clean it up
+        let markdown = clone.textContent || clone.innerText || '';
+
+        // Clean up excessive whitespace while preserving structure
+        markdown = markdown
+          .replace(/\n{3,}/g, '\n\n') // Reduce multiple consecutive newlines to max 2
+          .replace(/[ \t]+/g, ' ') // Collapse multiple spaces/tabs to single space
+          .replace(/^\n+|\n+$/g, '') // Trim leading/trailing newlines
+          .trim();
+
+        return markdown;
       };
 
       // Modern Reddit (shreddit) - the post content is in different places depending on post type
@@ -394,21 +412,28 @@ const extractors = {
       }
 
       // Try to get post content from the main post container
-      if (!content) {
-        const postContent = document.querySelector('[data-test-id="post-content"], shreddit-post [data-test-id="post-content"]');
-        if (postContent) {
-          const formattedContent = convertRedditContent(postContent).trim();
-          if (formattedContent) {
-            content += `## Post Content\n\n${formattedContent}\n\n`;
-          }
+      const postContent = document.querySelector('[data-test-id="post-content"], shreddit-post [data-test-id="post-content"]');
+      if (postContent) {
+        const formattedContent = convertRedditContent(postContent).trim();
+        if (formattedContent) {
+          content += `## Post Content\n\n${formattedContent}\n\n`;
         }
       }
 
       // Fallback: try old Reddit layout
-      if (!content) {
-        const oldRedditContent = document.querySelector('.usertext-body .md');
-        if (oldRedditContent) {
-          const formattedContent = convertRedditContent(oldRedditContent).trim();
+      const oldRedditContent = document.querySelector('.usertext-body .md');
+      if (oldRedditContent && !content.includes('## Post Content')) {
+        const formattedContent = convertRedditContent(oldRedditContent).trim();
+        if (formattedContent) {
+          content += `## Post Content\n\n${formattedContent}\n\n`;
+        }
+      }
+
+      // Last resort: try other common content selectors
+      if (!content.includes('## Post Content')) {
+        const alternativeContent = document.querySelector('shreddit-post div[slot="text-body"], .expando .md, .linkflairrange');
+        if (alternativeContent) {
+          const formattedContent = convertRedditContent(alternativeContent).trim();
           if (formattedContent) {
             content += `## Post Content\n\n${formattedContent}\n\n`;
           }
