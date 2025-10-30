@@ -142,84 +142,115 @@ const extractors = {
         metadata: {}
       };
 
+      // Helper function to clean text content
+      const cleanText = (text) => {
+        return text
+          .replace(/var\s+\w+[\s\S]*?}/g, '') // Remove JavaScript variables
+          .replace(/P\.when[\s\S]*?\)/g, '') // Remove Amazon P.when calls
+          .replace(/A\.declarative[\s\S]*?\)/g, '') // Remove Amazon declarative calls
+          .replace(/\s+/g, ' ') // Collapse multiple whitespace
+          .trim();
+      };
+
       // Get product title
       const titleEl = document.querySelector('#productTitle, h1.product-title');
-      result.title = titleEl ? titleEl.textContent.trim() : document.title;
+      result.title = titleEl ? cleanText(titleEl.textContent) : document.title;
 
       let content = `# ${result.title}\n\n`;
 
-      // Get price
-      const priceWhole = document.querySelector('.a-price-whole');
-      const priceFraction = document.querySelector('.a-price-fraction');
-      let price = '';
-      if (priceWhole) {
-        price = priceWhole.textContent.trim();
-        if (priceFraction) {
-          price += priceFraction.textContent.trim();
+      // Get price - be more specific to avoid picking up JavaScript
+      const priceContainer = document.querySelector('.a-price.a-text-center.aok-align-center, .a-price.aok-align-center');
+      if (priceContainer) {
+        const priceWhole = priceContainer.querySelector('.a-price-whole');
+        const priceFraction = priceContainer.querySelector('.a-price-fraction');
+        let price = '';
+        if (priceWhole && priceFraction) {
+          price = cleanText(priceWhole.textContent) + cleanText(priceFraction.textContent);
+          content += `**Price:** $${price}\n\n`;
         }
-        content += `**Price:** $${price}\n\n`;
       }
 
-      // Get rating
-      const rating = document.querySelector('[data-hook="rating-out-of-text"], .a-icon-alt');
-      if (rating) {
-        content += `**Rating:** ${rating.textContent.trim()}\n\n`;
+      // Get rating - be more specific to avoid JavaScript
+      const ratingContainer = document.querySelector('#acrPopover, [data-hook="average-star-rating"]');
+      if (ratingContainer) {
+        const ratingText = ratingContainer.querySelector('.a-color-base, [data-hook="rating-out-of-text"]');
+        if (ratingText) {
+          const rating = cleanText(ratingText.textContent);
+          if (rating && !rating.includes('var') && !rating.includes('P.when')) {
+            content += `**Rating:** ${rating}\n\n`;
+          }
+        }
       }
 
       // Get product image
       const mainImage = document.querySelector('#landingImage, #imgBlkFront');
-      if (mainImage && mainImage.src) {
+      if (mainImage && mainImage.src && !mainImage.src.includes('javascript:')) {
         content += `![Product Image](${mainImage.src})\n\n`;
       }
 
-      // Get product features
-      const features = document.querySelector('#feature-bullets ul, #feature-bullets-btf ul');
-      if (features) {
-        content += `## Key Features\n\n`;
-        const featureItems = features.querySelectorAll('li span.a-list-item');
-        featureItems.forEach(item => {
-          const text = item.textContent.trim();
-          if (text && text.length > 0) {
-            content += `- ${text}\n`;
-          }
-        });
-        content += '\n';
+      // Get product features - be more selective
+      const featuresContainer = document.querySelector('#feature-bullets, #feature-bullets-btf');
+      if (featuresContainer) {
+        const featureItems = featuresContainer.querySelectorAll('li[data-a-expander-name], li span.a-list-item');
+        if (featureItems.length > 0) {
+          content += `## Key Features\n\n`;
+          featureItems.forEach(item => {
+            const text = cleanText(item.textContent);
+            if (text && text.length > 10 && !text.includes('var') && !text.includes('P.when')) {
+              content += `- ${text}\n`;
+            }
+          });
+          content += '\n';
+        }
       }
 
-      // Get product description - try multiple selectors
+      // Get product description - try multiple clean selectors
       let description = '';
 
-      // Method 1: Product description section
+      // Method 1: Product description section - avoid script tags
       const descSection = document.querySelector('#productDescription');
       if (descSection) {
         const descParagraphs = descSection.querySelectorAll('p');
         if (descParagraphs.length > 0) {
           description = Array.from(descParagraphs)
-            .map(p => p.textContent.trim())
+            .map(p => {
+              const text = cleanText(p.textContent);
+              return text && text.length > 20 && !text.includes('var') ? text : '';
+            })
             .filter(text => text.length > 0)
             .join('\n\n');
-        } else {
-          description = descSection.textContent.trim();
         }
       }
 
-      // Method 2: Book description
+      // Method 2: Book description - clean
       if (!description) {
-        const bookDesc = document.querySelector('#bookDescription_feature_div noscript, #bookDescription_feature_div');
+        const bookDesc = document.querySelector('#bookDescription_feature_div');
         if (bookDesc) {
-          description = bookDesc.textContent.trim();
+          const paragraphs = bookDesc.querySelectorAll('p');
+          if (paragraphs.length > 0) {
+            description = Array.from(paragraphs)
+              .map(p => {
+                const text = cleanText(p.textContent);
+                return text && text.length > 20 && !text.includes('var') ? text : '';
+              })
+              .filter(text => text.length > 0)
+              .join('\n\n');
+          }
         }
       }
 
-      // Method 3: A+ content
+      // Method 3: A+ content - clean
       if (!description) {
         const aplus = document.querySelector('#aplus, #aplus_feature_div');
         if (aplus) {
           const aplusParagraphs = aplus.querySelectorAll('p, .aplus-p1, .aplus-p2, .aplus-p3');
           if (aplusParagraphs.length > 0) {
             description = Array.from(aplusParagraphs)
-              .map(p => p.textContent.trim())
-              .filter(text => text.length > 20)
+              .map(p => {
+                const text = cleanText(p.textContent);
+                return text && text.length > 30 && !text.includes('var') ? text : '';
+              })
+              .filter(text => text.length > 0)
               .slice(0, 5)
               .join('\n\n');
           }
@@ -230,41 +261,42 @@ const extractors = {
         content += `## Description\n\n${description}\n\n`;
       }
 
-      // Extract product detail tables
-      let detailsContent = '';
+      // Extract product detail tables - clean
       const productTables = document.querySelectorAll('#productDetails_detailBullets_sections table, #productDetails table, .technical-details table');
       if (productTables.length > 0) {
-        detailsContent = '\n## Product Details\n\n';
+        content += '\n## Product Details\n\n';
         productTables.forEach((table, index) => {
-          detailsContent += convertTableToMarkdown(table);
+          content += convertTableToMarkdown(table);
           if (index < productTables.length - 1) {
-            detailsContent += '\n';
+            content += '\n';
           }
         });
       }
 
-      // Fallback: extract from bullet/detail sections
+      // Fallback: extract from bullet/detail sections - clean
       const detailsTable = document.querySelector('#detailBullets_feature_div, #prodDetails');
-      if (detailsTable && !detailsContent) {
+      if (detailsTable) {
         const details = {};
         const rows = detailsTable.querySelectorAll('li, tr');
         rows.forEach(row => {
           const label = row.querySelector('.a-text-bold, th');
           const value = row.querySelector('span:not(.a-text-bold), td');
           if (label && value) {
-            details[label.textContent.trim().replace(':', '')] = value.textContent.trim();
+            const labelText = cleanText(label.textContent);
+            const valueText = cleanText(value.textContent);
+            if (labelText && valueText && !labelText.includes('var') && !valueText.includes('var')) {
+              details[labelText.replace(':', '')] = valueText;
+            }
           }
         });
 
         if (Object.keys(details).length > 0) {
-          detailsContent = '\n## Product Details\n\n';
+          content += '\n## Product Details\n\n';
           for (const [key, value] of Object.entries(details)) {
-            detailsContent += `**${key}:** ${value}\n`;
+            content += `**${key}:** ${value}\n`;
           }
         }
       }
-
-      content += detailsContent;
 
       // Get ASIN
       const asinElement = document.querySelector('[data-asin]');
@@ -272,7 +304,7 @@ const extractors = {
 
       result.content = content;
       result.metadata = {
-        price,
+        price: result.content.includes('**Price:**') ? result.content.match(/\*\*Price:\*\s*\$(.*?)\n/)?.[1] : null,
         asin,
         type: 'amazon-product'
       };
