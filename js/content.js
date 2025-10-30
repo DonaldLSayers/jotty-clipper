@@ -24,7 +24,7 @@ const extractors = {
       // Try text post content
       const textPost = document.querySelector('div[slot="text-body"], shreddit-post div[slot="text-body"]');
       if (textPost) {
-        content += `## Post Content\n\n${textPost.innerText.trim()}\n\n`;
+        content += `## Post Content\n\n${extractTextWithWhitespace(textPost).trim()}\n\n`;
       }
 
       // Try to get post content from the main post container
@@ -36,13 +36,13 @@ const extractors = {
           if (allParas.length > 0) {
             content += `## Post Content\n\n`;
             allParas.forEach(p => {
-              const text = p.textContent.trim();
+              const text = extractTextWithWhitespace(p).trim();
               if (text && text.length > 0) {
                 content += `${text}\n\n`;
               }
             });
           } else {
-            content += `## Post Content\n\n${postContent.textContent.trim()}\n\n`;
+            content += `## Post Content\n\n${extractTextWithWhitespace(postContent).trim()}\n\n`;
           }
         }
       }
@@ -51,7 +51,7 @@ const extractors = {
       if (!content) {
         const oldRedditContent = document.querySelector('.usertext-body .md');
         if (oldRedditContent) {
-          content += `## Post Content\n\n${oldRedditContent.innerText.trim()}\n\n`;
+          content += `## Post Content\n\n${convertToMarkdown(oldRedditContent).trim()}\n\n`;
         }
       }
 
@@ -158,13 +158,13 @@ const extractors = {
         let descElement = document.querySelector('ytd-text-inline-expander#description-inline-expander yt-attributed-string span');
 
         if (descElement) {
-          description = descElement.textContent.trim();
+          description = extractTextWithWhitespace(descElement).trim();
         } else {
           // Try alternative selector
           descElement = document.querySelector('#description-inline-expander yt-formatted-string, ytd-text-inline-expander #content');
           if (descElement) {
-            // Get inner text and clean it
-            const allText = descElement.innerText || descElement.textContent;
+            // Get text preserving whitespace and clean it
+            const allText = extractTextWithWhitespace(descElement);
             // Remove metadata lines that appear before the actual description
             description = allText
               .split('\n')
@@ -538,12 +538,12 @@ const extractors = {
         const descParagraphs = descSection.querySelectorAll('p');
         if (descParagraphs.length > 0) {
           description = Array.from(descParagraphs)
-            .map(p => p.textContent.trim())
+            .map(p => extractTextWithWhitespace(p).trim())
             .filter(text => text.length > 0)
             .join('\n\n');
         } else {
-          // Fallback: get all text from the section
-          description = descSection.textContent.trim();
+          // Fallback: get all text from the section preserving whitespace
+          description = extractTextWithWhitespace(descSection).trim();
         }
       }
 
@@ -551,7 +551,7 @@ const extractors = {
       if (!description) {
         const bookDesc = document.querySelector('#bookDescription_feature_div noscript, #bookDescription_feature_div');
         if (bookDesc) {
-          description = bookDesc.textContent.trim();
+          description = extractTextWithWhitespace(bookDesc).trim();
         }
       }
 
@@ -562,7 +562,7 @@ const extractors = {
           const aplusParagraphs = aplus.querySelectorAll('p, .aplus-p1, .aplus-p2, .aplus-p3');
           if (aplusParagraphs.length > 0) {
             description = Array.from(aplusParagraphs)
-              .map(p => p.textContent.trim())
+              .map(p => extractTextWithWhitespace(p).trim())
               .filter(text => text.length > 20) // Filter out short/empty content
               .slice(0, 5) // Limit to first 5 paragraphs
               .join('\n\n');
@@ -577,7 +577,7 @@ const extractors = {
           const paras = featureDiv.querySelectorAll('p');
           if (paras.length > 0) {
             description = Array.from(paras)
-              .map(p => p.textContent.trim())
+              .map(p => extractTextWithWhitespace(p).trim())
               .filter(text => text.length > 0)
               .join('\n\n');
           }
@@ -721,7 +721,36 @@ function extractTwitter() {
   return result;
 }
 
-// Convert HTML to Markdown-like format
+// Helper function to preserve whitespace when extracting text
+function extractTextWithWhitespace(element) {
+  const walker = document.createTreeWalker(
+    element,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
+
+  let text = '';
+  let currentNode;
+
+  while (currentNode = walker.nextNode()) {
+    const parent = currentNode.parentElement;
+    const parentTag = parent ? parent.tagName.toLowerCase() : '';
+
+    // Preserve line breaks for block elements
+    if (['p', 'div', 'section', 'article', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br'].includes(parentTag)) {
+      text += currentNode.textContent + '\n';
+    } else if (parentTag === 'br') {
+      text += '\n';
+    } else {
+      text += currentNode.textContent;
+    }
+  }
+
+  return text;
+}
+
+// Convert HTML to Markdown-like format with better whitespace preservation
 function convertToMarkdown(element) {
   let markdown = '';
   const clone = element.cloneNode(true);
@@ -730,10 +759,20 @@ function convertToMarkdown(element) {
   clone.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => {
     const level = parseInt(heading.tagName[1]);
     const prefix = '#'.repeat(level);
-    heading.textContent = `\n${prefix} ${heading.textContent.trim()}\n\n`;
+    heading.innerHTML = `\n${prefix} ${heading.textContent.trim()}\n\n`;
   });
 
-  // Process code blocks
+  // Process paragraphs - add line breaks after each
+  clone.querySelectorAll('p').forEach(p => {
+    p.innerHTML = `${p.innerHTML.trim()}\n\n`;
+  });
+
+  // Process line breaks explicitly
+  clone.querySelectorAll('br').forEach(br => {
+    br.outerHTML = '\n';
+  });
+
+  // Process code blocks with proper whitespace
   clone.querySelectorAll('pre').forEach(pre => {
     const code = pre.querySelector('code');
     if (code) {
@@ -766,17 +805,37 @@ function convertToMarkdown(element) {
     el.textContent = `*${el.textContent}*`;
   });
 
-  // Process lists
+  // Process lists with proper formatting
   clone.querySelectorAll('ul, ol').forEach(list => {
     const items = list.querySelectorAll('li');
     const isOrdered = list.tagName === 'OL';
+    let listContent = '\n';
+
     items.forEach((item, idx) => {
       const prefix = isOrdered ? `${idx + 1}. ` : '- ';
-      item.textContent = `${prefix}${item.textContent.trim()}\n`;
+      // Get the content of the li element, preserving internal structure
+      const itemClone = item.cloneNode(true);
+      // Remove the original li content and replace with formatted version
+      itemClone.querySelectorAll('ul, ol').forEach(nestedList => {
+        nestedList.remove(); // Handle nested lists separately
+      });
+      const itemText = itemClone.textContent.trim();
+      listContent += `${prefix}${itemText}\n`;
     });
+
+    list.outerHTML = listContent + '\n';
   });
 
-  markdown = clone.innerText;
+  // Extract text preserving whitespace structure
+  markdown = extractTextWithWhitespace(clone);
+
+  // Clean up excessive whitespace while preserving meaningful structure
+  markdown = markdown
+    .replace(/\n{3,}/g, '\n\n') // Reduce multiple consecutive newlines to max 2
+    .replace(/[ \t]+/g, ' ') // Collapse multiple spaces/tabs to single space
+    .replace(/^\n+|\n+$/g, '') // Trim leading/trailing newlines
+    + '\n'; // Ensure trailing newline
+
   return markdown;
 }
 
@@ -791,9 +850,21 @@ function genericExtract(clipType) {
   };
 
   if (clipType === 'selection') {
-    const selection = window.getSelection().toString();
-    result.content = selection || 'No text selected';
-    result.title = selection.substring(0, 100) + (selection.length > 100 ? '...' : '');
+    const selection = window.getSelection();
+    let selectedText = '';
+
+    // Preserve whitespace in selections
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const container = document.createElement('div');
+      container.appendChild(range.cloneContents());
+      selectedText = extractTextWithWhitespace(container).trim();
+    } else {
+      selectedText = selection.toString();
+    }
+
+    result.content = selectedText || 'No text selected';
+    result.title = selectedText.substring(0, 100) + (selectedText.length > 100 ? '...' : '');
   } else if (clipType === 'full') {
     // Get main content
     const article = document.querySelector('article, main, [role="main"], .post, .content');
@@ -808,12 +879,14 @@ function genericExtract(clipType) {
     if (article) {
       result.content = convertToMarkdown(article);
     } else {
-      // Fall back to readable content
+      // Fall back to readable content with better whitespace preservation
       const paragraphs = Array.from(document.querySelectorAll('p'))
         .filter(p => p.textContent.trim().length > 50)
         .slice(0, 20);
 
-      result.content = paragraphs.map(p => p.textContent.trim()).join('\n\n');
+      result.content = paragraphs
+        .map(p => extractTextWithWhitespace(p).trim())
+        .join('\n\n');
     }
   }
 
