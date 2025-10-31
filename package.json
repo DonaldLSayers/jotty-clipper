@@ -4,7 +4,10 @@
   "description": "Clip web content to your Jotty notes with smart extraction",
   "scripts": {
     "sync-version": "node sync-version.js",
-    "build": "npm run sync-version"
+    "build": "npm run sync-version",
+    "version": "npm run sync-version && git add -A",
+    "preversion": "echo 'Preparing to bump version...'",
+    "postversion": "echo 'Version bumped! Run: git push && git push --tags'"
   },
   "devDependencies": {},
   "private": true
