@@ -109,6 +109,24 @@ const handleSave = async (e) => {
 }
 
 /**
+ * Show status message next to test button
+ * @param {string} message - The message to show
+ * @param {string} type - The type of message (success, error, info)
+ * @returns {void}
+ */
+const showTestStatus = (message, type = 'success') => {
+  const statusEl = document.getElementById('test-status-message');
+  statusEl.textContent = message;
+  statusEl.className = `status-message ${type}`;
+  statusEl.style.margin = '0';
+  statusEl.style.flex = '1';
+
+  setTimeout(() => {
+    statusEl.classList.add('hidden');
+  }, 5000);
+};
+
+/**
  * Test connection
  * @returns {void}
  */
@@ -117,7 +135,7 @@ const testConnection = async () => {
   const apiKey = document.getElementById('api-key').value.trim();
 
   if (!url || !apiKey) {
-    showStatus('Please enter both URL and API key', 'error');
+    showTestStatus('Please enter both URL and API key', 'error');
     return;
   }
 
@@ -125,6 +143,10 @@ const testConnection = async () => {
   testBtn.disabled = true;
   const originalContent = testBtn.innerHTML;
   testBtn.innerHTML = '<span class="loading"></span> Testing...';
+
+  // Clear any previous test status
+  const testStatusEl = document.getElementById('test-status-message');
+  testStatusEl.classList.add('hidden');
 
   try {
     const response = await fetch(`${url}/api/notes`, {
@@ -139,13 +161,26 @@ const testConnection = async () => {
     }
 
     await response.json();
-    showStatus(`Connection successful! API is accessible.`, 'success');
+
+    // Auto-save settings on successful test
+    const settings = {
+      jottyUrl: url,
+      jottyApiKey: apiKey,
+      defaultCategory: document.getElementById('default-category').value,
+      includeMetadata: document.getElementById('include-metadata').checked,
+      includeImages: document.getElementById('include-images').checked,
+      autoTag: document.getElementById('auto-tag').checked
+    };
+
+    await browser.storage.sync.set(settings);
+
+    showTestStatus(`Connection successful! Settings saved automatically.`, 'success');
 
     await loadCategories(url, apiKey);
 
   } catch (error) {
     console.error('Connection test failed:', error);
-    showStatus(`Connection failed: ${error.message}`, 'error');
+    showTestStatus(`Connection failed: ${error.message}`, 'error');
   } finally {
     testBtn.disabled = false;
     testBtn.innerHTML = originalContent;
