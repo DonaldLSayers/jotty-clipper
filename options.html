@@ -63,12 +63,15 @@
           <p class="help-text">Your personal API key from Jotty settings</p>
         </div>
 
-        <button type="button" id="test-connection" class="btn btn-secondary">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Test Connection
-        </button>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button type="button" id="test-connection" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Test Connection
+          </button>
+          <div id="test-status-message" class="status-message hidden" style="margin: 0; flex: 1;"></div>
+        </div>
       </div>
 
       <div class="section">
@@ -117,7 +120,7 @@
 
       <div class="section">
         <h2>About</h2>
-        <p class="section-description">Jotty Clipper v1.1.1</p>
+        <p class="section-description">Jotty Clipper v1.2.1</p>
         <p class="help-text">
           Clip web content to your Jotty notes with smart extraction for Reddit, YouTube, Twitter, Medium, GitHub, Stack Overflow, and more.
         </p>

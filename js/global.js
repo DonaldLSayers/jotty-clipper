@@ -86,6 +86,31 @@ const loadPopupSettings = async () => {
 }
 
 /**
+ * Refresh any open Jotty tabs to show the new clip
+ * @param {string} jottyUrl - The base URL of the Jotty instance
+ */
+const refreshJottyTabs = async (jottyUrl) => {
+  try {
+    // Get the base domain from the Jotty URL
+    const jottyDomain = new URL(jottyUrl).origin;
+
+    // Find all tabs that match the Jotty domain
+    const tabs = await browser.tabs.query({});
+    const jottyTabs = tabs.filter(tab => tab.url && tab.url.startsWith(jottyDomain));
+
+    // Refresh each Jotty tab
+    for (const tab of jottyTabs) {
+      await browser.tabs.reload(tab.id);
+    }
+
+    console.log(`Refreshed ${jottyTabs.length} Jotty tab(s)`);
+  } catch (error) {
+    console.error('Error refreshing Jotty tabs:', error);
+    // Don't throw - this is a non-critical enhancement
+  }
+}
+
+/**
  * Save the data to Jotty
  * @param {Object} data - The data to save
  * @returns {Promise<Object>} - The response from the Jotty API
@@ -93,7 +118,7 @@ const loadPopupSettings = async () => {
 const saveToJotty = async (data) => {
     const settings = await browser.storage.sync.get(['jottyUrl', 'jottyApiKey']);
     const contentWithSource = `**Source:** ${data.url}\n**Clipped:** ${new Date().toLocaleString()}\n\n---\n\n${data.content}`;
-  
+
     const response = await fetch(`${settings.jottyUrl}/api/notes`, {
       method: 'POST',
       headers: {
@@ -106,12 +131,15 @@ const saveToJotty = async (data) => {
         category: data.categoryId
       })
     });
-  
+
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.error || error.message || 'Failed to save to Jotty');
     }
-  
+
+    // Refresh any open Jotty tabs after successful save
+    await refreshJottyTabs(settings.jottyUrl);
+
     return response.json();
 }
 

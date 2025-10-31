@@ -63,7 +63,7 @@ async function ensureContentScript(tabId) {
     try {
       await browser.scripting.executeScript({
         target: { tabId: tabId },
-        files: ['js/content.js']
+        files: ['js/browser-polyfill.min.js', 'js/content.js']
       });
       return true;
     } catch (injectError) {
@@ -71,6 +71,64 @@ async function ensureContentScript(tabId) {
       return false;
     }
   }
+}
+
+/**
+ * Refresh any open Jotty tabs to show the new clip
+ * @param {string} jottyUrl - The base URL of the Jotty instance
+ */
+async function refreshJottyTabs(jottyUrl) {
+  try {
+    // Get the base domain from the Jotty URL
+    const jottyDomain = new URL(jottyUrl).origin;
+
+    // Find all tabs that match the Jotty domain
+    const tabs = await browser.tabs.query({});
+    const jottyTabs = tabs.filter(tab => tab.url && tab.url.startsWith(jottyDomain));
+
+    // Refresh each Jotty tab
+    for (const tab of jottyTabs) {
+      await browser.tabs.reload(tab.id);
+    }
+
+    console.log(`Refreshed ${jottyTabs.length} Jotty tab(s)`);
+  } catch (error) {
+    console.error('Error refreshing Jotty tabs:', error);
+    // Don't throw - this is a non-critical enhancement
+  }
+}
+
+/**
+ * Save the data to Jotty
+ * @param {Object} data - The data to save
+ * @returns {Promise<Object>} - The response from the Jotty API
+ */
+async function saveToJotty(data) {
+  const settings = await browser.storage.sync.get(['jottyUrl', 'jottyApiKey']);
+  const contentWithSource = `**Source:** ${data.url}\n**Clipped:** ${new Date().toLocaleString()}\n\n---\n\n${data.content}`;
+
+  const response = await fetch(`${settings.jottyUrl}/api/notes`, {
+    method: 'POST',
+    headers: {
+      'x-api-key': settings.jottyApiKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      title: data.title,
+      content: contentWithSource,
+      category: data.categoryId
+    })
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.error || error.message || 'Failed to save to Jotty');
+  }
+
+  // Refresh any open Jotty tabs after successful save
+  await refreshJottyTabs(settings.jottyUrl);
+
+  return response.json();
 }
 
 /**
@@ -85,16 +143,43 @@ async function handleContextMenuClick(info, tab) {
 
     if (!settings.jottyUrl || !settings.jottyApiKey) {
       console.error('Jotty Clipper: API settings not configured');
+      browser.notifications.create({
+        type: 'basic',
+        iconUrl: 'icons/icon48.png',
+        title: 'Jotty Clipper',
+        message: 'Please configure your API settings first'
+      });
       return;
     }
 
     let content = '';
     let title = '';
+    let metadata = {};
 
     switch (info.menuItemId) {
       case 'clip-selection':
-        content = info.selectionText;
-        title = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+        try {
+          await ensureContentScript(tab.id);
+          const response = await browser.tabs.sendMessage(tab.id, {
+            action: 'extractContent',
+            clipType: 'selection'
+          });
+
+          if (response && response.content) {
+            content = response.content;
+            title = response.content.substring(0, 100) + (response.content.length > 100 ? '...' : '');
+            metadata = response.metadata || {};
+          } else {
+            // Fallback to plain text if content script fails
+            content = info.selectionText;
+            title = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+          }
+        } catch (error) {
+          console.error('Error extracting selection:', error);
+          // Fallback to plain text
+          content = info.selectionText;
+          title = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+        }
         break;
 
       case 'clip-image':
@@ -118,6 +203,7 @@ async function handleContextMenuClick(info, tab) {
           if (response && response.content) {
             content = response.content;
             title = tab.title;
+            metadata = response.metadata || {};
           }
         } catch (error) {
           console.error('Error extracting page:', error);
@@ -132,10 +218,26 @@ async function handleContextMenuClick(info, tab) {
       content,
       categoryId: settings.defaultCategory,
       url: tab.url,
-      settings
+      metadata
     });
+
+    // Show success notification
+    browser.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'Jotty Clipper',
+      message: `Successfully clipped: ${title.substring(0, 50)}${title.length > 50 ? '...' : ''}`
+    });
+
   } catch (error) {
     console.error('Error in handleContextMenuClick:', error);
+    // Show error notification
+    browser.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'Jotty Clipper - Error',
+      message: error.message || 'Failed to clip content'
+    });
   }
 }
 
