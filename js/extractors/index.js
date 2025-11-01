@@ -18,7 +18,10 @@
     const extractorModules = [
       window.JottyExtractors.youtube,
       window.JottyExtractors.amazon,
-      window.JottyExtractors.reddit
+      window.JottyExtractors.reddit,
+      window.JottyExtractors.wikipedia,
+      window.JottyExtractors.stackoverflow,
+      window.JottyExtractors.medium
     ];
 
     // Build domain mappings

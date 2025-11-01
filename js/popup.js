@@ -80,6 +80,9 @@ const ensureContentScript = async () => {
           'js/extractors/youtube.js',
           'js/extractors/amazon.js',
           'js/extractors/reddit.js',
+          'js/extractors/wikipedia.js',
+          'js/extractors/stackoverflow.js',
+          'js/extractors/medium.js',
           'js/extractors/index.js',
           'js/content.js'
         ]
