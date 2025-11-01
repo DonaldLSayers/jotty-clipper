@@ -117,7 +117,21 @@ const refreshJottyTabs = async (jottyUrl) => {
  */
 const saveToJotty = async (data) => {
     const settings = await browser.storage.sync.get(['jottyUrl', 'jottyApiKey']);
-    const contentWithSource = `**Source:** ${data.url}\n**Clipped:** ${new Date().toLocaleString()}\n\n---\n\n${data.content}`;
+
+    // Preserve line breaks in markdown by adding two spaces before single newlines
+    // In markdown, a single newline is ignored unless preceded by two spaces
+    let content = data.content;
+
+    // Replace single newlines (not double) with two spaces + newline for proper markdown rendering
+    content = content.replace(/([^\n])\n(?!\n)/g, '$1  \n');
+
+    const contentWithSource = `**Source:** ${data.url}\n**Clipped:** ${new Date().toLocaleString()}\n\n---\n\n${content}`;
+
+    const bodyData = {
+      title: data.title,
+      content: contentWithSource,
+      category: data.categoryId
+    };
 
     const response = await fetch(`${settings.jottyUrl}/api/notes`, {
       method: 'POST',
@@ -125,11 +139,7 @@ const saveToJotty = async (data) => {
         'x-api-key': settings.jottyApiKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        title: data.title,
-        content: contentWithSource,
-        category: data.categoryId
-      })
+      body: JSON.stringify(bodyData)
     });
 
     if (!response.ok) {

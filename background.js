@@ -63,7 +63,14 @@ async function ensureContentScript(tabId) {
     try {
       await browser.scripting.executeScript({
         target: { tabId: tabId },
-        files: ['js/browser-polyfill.min.js', 'js/content.js']
+        files: [
+          'js/browser-polyfill.min.js',
+          'js/extractors/youtube.js',
+          'js/extractors/amazon.js',
+          'js/extractors/reddit.js',
+          'js/extractors/index.js',
+          'js/content.js'
+        ]
       });
       return true;
     } catch (injectError) {
@@ -105,7 +112,21 @@ async function refreshJottyTabs(jottyUrl) {
  */
 async function saveToJotty(data) {
   const settings = await browser.storage.sync.get(['jottyUrl', 'jottyApiKey']);
-  const contentWithSource = `**Source:** ${data.url}\n**Clipped:** ${new Date().toLocaleString()}\n\n---\n\n${data.content}`;
+
+  // Preserve line breaks in markdown by adding two spaces before single newlines
+  // In markdown, a single newline is ignored unless preceded by two spaces
+  let content = data.content;
+
+  // Replace single newlines (not double) with two spaces + newline for proper markdown rendering
+  content = content.replace(/([^\n])\n(?!\n)/g, '$1  \n');
+
+  const contentWithSource = `**Source:** ${data.url}\n**Clipped:** ${new Date().toLocaleString()}\n\n---\n\n${content}`;
+
+  const bodyData = {
+    title: data.title,
+    content: contentWithSource,
+    category: data.categoryId
+  };
 
   const response = await fetch(`${settings.jottyUrl}/api/notes`, {
     method: 'POST',
@@ -113,11 +134,7 @@ async function saveToJotty(data) {
       'x-api-key': settings.jottyApiKey,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
-      title: data.title,
-      content: contentWithSource,
-      category: data.categoryId
-    })
+    body: JSON.stringify(bodyData)
   });
 
   if (!response.ok) {
@@ -160,6 +177,17 @@ async function handleContextMenuClick(info, tab) {
       case 'clip-selection':
         try {
           await ensureContentScript(tab.id);
+
+          // Get the clean page title from the extractor
+          let titleResponse;
+          try {
+            titleResponse = await browser.tabs.sendMessage(tab.id, {
+              action: 'getPageInfo'
+            });
+          } catch (e) {
+            console.log('Could not get page info, will use tab title');
+          }
+
           const response = await browser.tabs.sendMessage(tab.id, {
             action: 'extractContent',
             clipType: 'selection'
@@ -167,18 +195,19 @@ async function handleContextMenuClick(info, tab) {
 
           if (response && response.content) {
             content = response.content;
-            title = response.content.substring(0, 100) + (response.content.length > 100 ? '...' : '');
+            // Use the clean title from extractor if available, otherwise fall back to tab.title
+            title = (titleResponse && titleResponse.title) ? titleResponse.title : tab.title;
             metadata = response.metadata || {};
           } else {
             // Fallback to plain text if content script fails
             content = info.selectionText;
-            title = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+            title = tab.title;
           }
         } catch (error) {
           console.error('Error extracting selection:', error);
           // Fallback to plain text
           content = info.selectionText;
-          title = content.substring(0, 100) + (content.length > 100 ? '...' : '');
+          title = tab.title;
         }
         break;
 
@@ -195,6 +224,18 @@ async function handleContextMenuClick(info, tab) {
       case 'clip-page':
         try {
           await ensureContentScript(tab.id);
+
+          // First get the clean title from the extractor
+          let titleResponse;
+          try {
+            titleResponse = await browser.tabs.sendMessage(tab.id, {
+              action: 'getPageInfo'
+            });
+          } catch (e) {
+            console.log('Could not get page info, will use tab title');
+          }
+
+          // Then get the content
           const response = await browser.tabs.sendMessage(tab.id, {
             action: 'extractContent',
             clipType: 'auto'
@@ -202,7 +243,8 @@ async function handleContextMenuClick(info, tab) {
 
           if (response && response.content) {
             content = response.content;
-            title = tab.title;
+            // Use the clean title from extractor if available, otherwise fall back to tab.title
+            title = (titleResponse && titleResponse.title) ? titleResponse.title : tab.title;
             metadata = response.metadata || {};
           }
         } catch (error) {

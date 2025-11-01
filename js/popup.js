@@ -70,12 +70,19 @@ const ensureContentScript = async () => {
 
   try {
     await browser.tabs.sendMessage(currentTab.id, { action: 'ping' });
-    return true; 
+    return true;
   } catch (error) {
     try {
       await browser.scripting.executeScript({
         target: { tabId: currentTab.id },
-        files: ['js/browser-polyfill.min.js', 'js/content.js']
+        files: [
+          'js/browser-polyfill.min.js',
+          'js/extractors/youtube.js',
+          'js/extractors/amazon.js',
+          'js/extractors/reddit.js',
+          'js/extractors/index.js',
+          'js/content.js'
+        ]
       });
       return true;
     } catch (injectError) {
