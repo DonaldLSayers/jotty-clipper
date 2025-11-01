@@ -2,179 +2,181 @@
 
 This guide shows you how to add custom content extractors for new websites.
 
-## Quick Guide
+## Quick Start
 
-All extractors are in `content.js` in the `extractors` object (starts around line 5).
+All extractors are now **modular** - each site has its own file in the `js/extractors/` directory. See the detailed [js/extractors/README.md](js/extractors/README.md) for more info.
 
-### Basic Template
+## How to Add a New Extractor
+
+### 1. Create Your Extractor File
+
+Create a new file in `js/extractors/` (e.g., `js/extractors/twitter.js`):
 
 ```javascript
-// Your Site extractor
-'example.com': {
-  name: 'Example',
-  extract: () => {
-    const result = {
-      title: '',
-      content: '',
-      metadata: {}
-    };
+// Twitter/X extractor
+(function() {
+  'use strict';
 
-    // 1. Get title
-    const titleEl = document.querySelector('h1');
-    result.title = titleEl ? titleEl.textContent.trim() : document.title;
-
-    // 2. Build content
-    let content = `# ${result.title}\n\n`;
-
-    // Extract main text
-    const article = document.querySelector('article');
-    if (article) {
-      content += article.innerText.trim() + '\n\n';
-    }
-
-    // Extract images
-    const images = document.querySelectorAll('img.content-image');
-    images.forEach((img, idx) => {
-      if (img.src) {
-        content += `![Image ${idx + 1}](${img.src})\n\n`;
-      }
-    });
-
-    result.content = content;
-
-    // 3. Add metadata
-    result.metadata = {
-      author: 'Author name here',
-      type: 'example-type'
-    };
-
-    return result;
+  if (typeof window.JottyExtractors === 'undefined') {
+    window.JottyExtractors = {};
   }
-},
+
+  window.JottyExtractors.twitter = {
+    name: 'Twitter',
+    domains: ['twitter.com', 'x.com'],
+    extract: () => {
+      const result = {
+        title: '',
+        content: '',
+        metadata: {}
+      };
+
+      // 1. Get title
+      const titleEl = document.querySelector('[data-testid="tweet"] div[lang]');
+      result.title = titleEl ? titleEl.textContent.trim() : document.title;
+
+      // 2. Build content
+      let content = `# ${result.title}\n\n`;
+
+      // Extract tweet text
+      const tweetText = document.querySelector('[data-testid="tweetText"]');
+      if (tweetText) {
+        content += tweetText.textContent.trim() + '\n\n';
+      }
+
+      // Extract images
+      const images = document.querySelectorAll('[data-testid="tweetPhoto"] img');
+      images.forEach((img, idx) => {
+        if (img.src) {
+          content += `![Image ${idx + 1}](${img.src})\n\n`;
+        }
+      });
+
+      result.content = content;
+
+      // 3. Add metadata
+      result.metadata = {
+        author: 'Author name here',
+        type: 'twitter-post'
+      };
+
+      return result;
+    }
+  };
+})();
 ```
 
-## Where to Add
+**Important:** Use the IIFE pattern shown above - browser extensions don't support ES6 modules in content scripts.
 
-Open `content.js` and find:
+### 2. Register in index.js
+
+Add your extractor to `js/extractors/index.js`:
 
 ```javascript
-const extractors = {
-  // Reddit extractor
-  'reddit.com': {
-    ...
-  },
+// Import your extractor
+window.JottyExtractors.loadExtractors = function() {
+  const extractors = {};
 
-  // ADD YOUR NEW EXTRACTOR HERE (before the closing };)
+  // Get all registered extractors
+  const extractorModules = [
+    window.JottyExtractors.youtube,
+    window.JottyExtractors.amazon,
+    window.JottyExtractors.reddit,
+    window.JottyExtractors.twitter  // <-- Add your extractor here
+  ];
 
+  // ... rest of the code
 };
 ```
 
-Add your extractor before the final `};`
+### 3. Update Manifest Files
 
-## Step-by-Step
+Add your extractor file to the `web_accessible_resources` in **all three** manifest files:
 
-### 1. Open DevTools on Target Site
-
-- Press F12 on the website
-- Right-click elements you want to extract → Inspect
-- Note the selectors (classes, IDs, tags)
-
-### 2. Find Selectors
-
-Examples:
-- Title: `h1.post-title` or `#article-title`
-- Content: `article.main-content` or `.post-body`
-- Author: `.author-name` or `[data-author]`
-- Images: `img.article-image`
-
-### 3. Test Selectors in Console
-
-In DevTools Console, test:
-```javascript
-document.querySelector('h1.title')
-document.querySelectorAll('p')
+**manifest.json:**
+```json
+"web_accessible_resources": [
+  {
+    "resources": [
+      "js/content.js",
+      "js/browser-polyfill.min.js",
+      "js/global.js",
+      "js/options.js",
+      "js/popup.js",
+      "js/readability.js",
+      "js/extractors/index.js",
+      "js/extractors/youtube.js",
+      "js/extractors/amazon.js",
+      "js/extractors/reddit.js",
+      "js/extractors/twitter.js",  // <-- Add here
+      "icons/lucide/lucide.min.js"
+    ],
+    "matches": ["*://*/*"]
+  }
+]
 ```
 
-### 4. Write Your Extractor
+Repeat for `manifest-chrome.json` and `manifest-firefox.json`.
 
-Copy the template above and modify the selectors.
+### 4. Update Injection Scripts
+
+Add your extractor to the injection list in **both** `background.js` and `js/popup.js`:
+
+**background.js:**
+```javascript
+await browser.scripting.executeScript({
+  target: { tabId: tabId },
+  files: [
+    'js/browser-polyfill.min.js',
+    'js/extractors/youtube.js',
+    'js/extractors/amazon.js',
+    'js/extractors/reddit.js',
+    'js/extractors/twitter.js',  // <-- Add here
+    'js/extractors/index.js',
+    'js/content.js'
+  ]
+});
+```
+
+**js/popup.js:**
+```javascript
+await browser.scripting.executeScript({
+  target: { tabId: currentTab.id },
+  files: [
+    'js/browser-polyfill.min.js',
+    'js/extractors/youtube.js',
+    'js/extractors/amazon.js',
+    'js/extractors/reddit.js',
+    'js/extractors/twitter.js',  // <-- Add here
+    'js/extractors/index.js',
+    'js/content.js'
+  ]
+});
+```
 
 ### 5. Reload Extension
 
-1. Save `content.js`
-2. Go to `chrome://extensions/`
+1. Save all files
+2. Go to `chrome://extensions/` (or `about:addons` in Firefox)
 3. Click reload on Jotty Clipper
 4. Test on the target website
 
-## Examples
+## Development Tips
 
-### News Article
+### Finding Selectors
 
-```javascript
-'news.example.com': {
-  name: 'Example News',
-  extract: () => {
-    const result = { title: '', content: '', metadata: {} };
+1. **Open DevTools** (F12) on the target website
+2. **Right-click** elements you want to extract → Inspect
+3. **Note the selectors** (classes, IDs, data attributes)
+4. **Test in Console:**
+   ```javascript
+   document.querySelector('h1.title')
+   document.querySelectorAll('.content p')
+   ```
 
-    // Title
-    result.title = document.querySelector('h1.headline').textContent.trim();
+### Common Patterns
 
-    // Content
-    let content = `# ${result.title}\n\n`;
-
-    // Byline
-    const author = document.querySelector('.byline');
-    if (author) content += `**By:** ${author.textContent.trim()}\n\n`;
-
-    // Article text
-    const paragraphs = document.querySelectorAll('.article-body p');
-    paragraphs.forEach(p => {
-      content += p.textContent.trim() + '\n\n';
-    });
-
-    result.content = content;
-    result.metadata = { type: 'news-article' };
-    return result;
-  }
-},
-```
-
-### Product Page
-
-```javascript
-'store.example.com': {
-  name: 'Example Store',
-  extract: () => {
-    const result = { title: '', content: '', metadata: {} };
-
-    result.title = document.querySelector('.product-name').textContent.trim();
-
-    let content = `# ${result.title}\n\n`;
-
-    // Price
-    const price = document.querySelector('.price');
-    if (price) content += `**Price:** ${price.textContent}\n\n`;
-
-    // Description
-    const desc = document.querySelector('.description');
-    if (desc) content += desc.textContent.trim() + '\n\n';
-
-    // Image
-    const img = document.querySelector('.product-image');
-    if (img) content += `![Product](${img.src})\n\n`;
-
-    result.content = content;
-    result.metadata = { type: 'product' };
-    return result;
-  }
-},
-```
-
-## Tips
-
-### Handle Missing Elements
-
-Always check if elements exist:
+**Handle Missing Elements:**
 ```javascript
 const author = document.querySelector('.author');
 if (author) {
@@ -182,78 +184,41 @@ if (author) {
 }
 ```
 
-### Multiple Selectors (Fallbacks)
-
+**Multiple Selectors (Fallbacks):**
 ```javascript
 const title = document.querySelector('h1.new-class') ||
               document.querySelector('h1.old-class') ||
               document.querySelector('h1');
 ```
 
-### Clean Text
-
-Remove unwanted elements:
-```javascript
-const article = document.querySelector('article').cloneNode(true);
-article.querySelectorAll('.ad, .share-buttons').forEach(el => el.remove());
-const cleanText = article.textContent.trim();
-```
-
-### Limit Content
-
-```javascript
-// Get only first 10 paragraphs
-const paragraphs = Array.from(document.querySelectorAll('p')).slice(0, 10);
-```
-
-### Async Extractors
-
-If you need to click buttons or wait for content:
-
+**Async Extractors:**
 ```javascript
 extract: async () => {  // <-- Add 'async'
   const result = { title: '', content: '', metadata: {} };
 
-  // Click "Show More"
+  // Click "Show More" button
   const btn = document.querySelector('.show-more');
   if (btn) {
     btn.click();
     await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
   }
 
-  // Now extract
+  // Now extract expanded content
   result.title = document.querySelector('h1').textContent.trim();
   return result;
 }
 ```
 
-## Common Selectors
+### Debugging
 
-| Element | Selector Examples |
-|---------|------------------|
-| Title | `h1`, `h1.title`, `#page-title` |
-| Article | `article`, `.post`, `.content` |
-| Author | `.author`, `[data-author]`, `.byline` |
-| Date | `time`, `.date`, `[datetime]` |
-| Images | `img`, `.article-img`, `img[src*="cdn"]` |
-| Paragraphs | `p`, `.content p`, `article p` |
-
-## Debugging
-
-If extraction isn't working:
-
-1. **Check Console:** Look for errors in DevTools
-2. **Test Selectors:** Use console to test: `document.querySelector('...')`
-3. **Check Element:** Make sure it exists on the page
-4. **Try Different Pages:** Test on multiple pages from the same site
-5. **Add Logging:** Use `console.log()` to debug:
+Add console logging to debug:
 
 ```javascript
 extract: () => {
-  const result = { title: '', content: '', metadata: {} };
+  console.log('🔍 Twitter extractor starting...');
 
-  const titleEl = document.querySelector('h1');
-  console.log('Title element:', titleEl);
+  const titleEl = document.querySelector('[data-testid="tweet"]');
+  console.log('✓ Found title element:', titleEl);
   console.log('Title text:', titleEl?.textContent);
 
   // ... rest of code
@@ -263,22 +228,25 @@ extract: () => {
 ## Current Extractors
 
 The extension includes extractors for:
-- ✅ Reddit
-- ✅ YouTube
-- ✅ Twitter/X
-- ✅ Medium
-- ✅ GitHub
-- ✅ Stack Overflow
-- ✅ Wikipedia
-- ✅ Amazon
-- ✅ IMDb
+- ✅ **YouTube** - Video title, description, thumbnail, channel info
+- ✅ **Amazon** - Product name, image, price, rating, features, specs
+- ✅ **Reddit** - Post title, content, images, embedded links
 
-Check `content.js` to see how they work!
+Check `js/extractors/` to see how they work!
+
+## Example: Look at Amazon
+
+The Amazon extractor (`js/extractors/amazon.js`) is a good example:
+- Handles multiple domains (all Amazon international sites)
+- Multiple fallback selectors for each element
+- Clean text extraction
+- Debug logging with console.log
 
 ## Need Help?
 
-1. Look at existing extractors in `content.js` for examples
-2. Use Chrome DevTools to inspect the page structure
-3. Test selectors in the console before adding them
+1. Check existing extractors in `js/extractors/` for examples
+2. Read the detailed guide: [js/extractors/README.md](js/extractors/README.md)
+3. Use Chrome DevTools to inspect page structure
+4. Test selectors in the console before adding them
 
 Happy clipping! 🎉

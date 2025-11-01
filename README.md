@@ -49,64 +49,6 @@ Right-click on any page element:
 
 [Jotty](https://github.com/fccview/jotty) is a modern note-taking and checklist application. This extension allows you to quickly save web content to your Jotty notes with smart extraction tailored to each website. 
 
-## Site-Specific Features
-
-### YouTube
-
-The extension extracts the **full video description**, not the truncated version shown initially. It automatically expands the description section to capture all content.
-
-**Extracted data:**
-- Video title
-- Channel name
-- View count
-- Upload date
-- Complete description
-- Video thumbnail
-- Video URL
-
-### Reddit
-
-Clips the main post content while preserving:
-- Post title
-- Post text content
-- Embedded images (from Reddit and Imgur)
-- Video links
-- Author and subreddit information
-- Timestamp
-
-### Twitter/X
-
-Captures:
-- Tweet text
-- Author information
-- Embedded images
-- Timestamp
-
-### Medium
-
-Extracts:
-- Article title
-- Full article content with formatting
-- Author name
-- Publication date
-- Proper markdown conversion
-
-### GitHub
-
-Supports:
-- Repository READMEs
-- Issue descriptions
-- Pull request details
-- Markdown content preservation
-
-### Stack Overflow
-
-Saves:
-- Question title and body
-- Accepted answer
-- Code snippets with syntax preservation
-- Question tags
-
 ## Development
 
 ### Adding New Site Extractors
